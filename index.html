@@ -151,7 +151,18 @@ html[dir="rtl"] .tag-best{letter-spacing:0}
 .pd-grid{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:start}
 .pd-visual{border-radius:24px;border:1px solid var(--blush-2);min-height:380px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);position:relative;overflow:hidden}
 .pd-visual svg{width:160px;height:160px}
-.pd-visual img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.pd-img-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.pd-img-wrap img{width:100%;height:100%;object-fit:cover;transition:opacity .22s ease}
+.pd-img-wrap img.swap{opacity:0}
+.pd-variants{margin:14px 0 4px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pd-variants-label{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+html[dir="rtl"] .pd-variants-label{letter-spacing:0}
+.v-pills{display:flex;flex-wrap:wrap;gap:8px}
+.v-pill{background:#fff;border:1.5px solid var(--blush-2);color:var(--ink);border-radius:999px;padding:8px 16px;font-size:.86rem;font-weight:600;cursor:pointer;font-family:inherit;transition:.18s;min-width:56px}
+.v-pill:hover{border-color:var(--gold);color:var(--gold)}
+.v-pill.on{background:var(--plum);border-color:var(--plum);color:#fff}
+.v-pill.on:hover{color:#fff}
+.v-pill:focus-visible{outline:2px solid var(--magenta);outline-offset:2px}
 .pd-info h1{font-size:clamp(1.7rem,3.4vw,2.5rem);color:var(--plum)}
 .pd-info .ar2{color:var(--ink-soft);margin-top:4px;font-size:1.05rem}
 .pd-info .cat-link{display:inline-block;margin-top:12px;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;cursor:pointer}
@@ -600,14 +611,38 @@ function rowToProduct(r){
     p:(r.price==null||r.price==='')?null:+r.price,
     i:r.icon||'mug', g:r.gradient||'g1',
     best:!!r.best, top:!!r.top_seller,
-    images, img:images[0]||''
+    images, img:images[0]||'',
+    variantGroup:r.variant_group||null,
+    variantLabelEn:r.variant_label_en||null,
+    variantLabelAr:r.variant_label_ar||null,
+    variantOrder:r.variant_order==null?null:+r.variant_order
   };
 }
+function annotateVariants(list){
+  const groups={};
+  list.forEach(p=>{if(p.variantGroup)(groups[p.variantGroup]=groups[p.variantGroup]||[]).push(p)});
+  Object.values(groups).forEach(grp=>{
+    grp.sort((a,b)=>(a.variantOrder||0)-(b.variantOrder||0));
+    const primary=grp[0];
+    primary.isVariantPrimary=true;
+    primary.variants=grp.map(v=>({
+      id:v.id, sku:v.sku,
+      labelEn:v.variantLabelEn||v.en, labelAr:v.variantLabelAr||v.ar,
+      p:v.p, img:v.img||primary.img, images:v.images.length?v.images:primary.images
+    }));
+    for(let i=1;i<grp.length;i++)grp[i].isVariantChild=true;
+  });
+  return list;
+}
+const visibleDB=()=>DB.filter(p=>!p.isVariantChild);
+const vlabel=v=>LANG==='en'?v.labelEn:v.labelAr;
 async function loadProducts(){
-  if(DEMO){ if(!DB.length) DB=SEED.map(p=>({img:'',images:[],sku:'',...p})); return true; }
+  if(DEMO){ if(!DB.length){ DB=SEED.map(p=>({img:'',images:[],sku:'',variantGroup:null,...p})); annotateVariants(DB);} return true; }
   const {data,error}=await sb.from('products').select('*').order('id');
   if(error){console.error(error);return false}
-  DB=data.map(rowToProduct);return true;
+  DB=data.map(rowToProduct);
+  annotateVariants(DB);
+  return true;
 }
 async function loadOrders(){
   if(DEMO){ ORDERS=demoOrders; return; }
@@ -701,7 +736,7 @@ function renderStatic(){
   document.getElementById('waFloat').href=wa;
 }
 function renderBest(){
-  const best=DB.filter(p=>p.best).sort((a,b)=>(b.top?1:0)-(a.top?1:0));
+  const best=visibleDB().filter(p=>p.best).sort((a,b)=>(b.top?1:0)-(a.top?1:0));
   const card=p=>`
     <div class="bs-card" onclick="go('product',${p.id})">
       <div class="bs-art ${p.g}">
@@ -718,9 +753,10 @@ function renderBest(){
   document.getElementById('bsTrack').innerHTML=html+html;
 }
 function renderCats(){
+  const vis=visibleDB();
   document.getElementById('catGrid').innerHTML=categories.map(c=>`
     <div class="cat-card" onclick="FILTER='${c.id}';go('home','catalog');renderChips();renderProducts()">
-      <span class="count">${DB.filter(p=>p.c===c.id).length} ${t('items')}</span>
+      <span class="count">${vis.filter(p=>p.c===c.id).length} ${t('items')}</span>
       ${icons[c.icon]}
       <h3>${LANG==='en'?c.en:c.ar}</h3>
       <p>${LANG==='en'?c.descEn:c.descAr}</p>
@@ -734,7 +770,7 @@ function renderChips(){
 function renderProducts(){
   const grid=document.getElementById('prodGrid');
   if(!DB.length){grid.innerHTML=`<div class="loading">${t('loadFail')}</div>`;return}
-  grid.innerHTML=DB.filter(p=>FILTER==='all'||p.c===FILTER).map(prodCard).join('');
+  grid.innerHTML=visibleDB().filter(p=>FILTER==='all'||p.c===FILTER).map(prodCard).join('');
 }
 function renderHome(){renderStatic();renderBest();renderCats();renderChips();renderProducts();renderCartBadge();}
 
@@ -742,26 +778,34 @@ function renderHome(){renderStatic();renderBest();renderCats();renderChips();ren
 function renderProductPage(id){
   const p=byId(id);
   if(!p){go('home');return}
-  const similar=DB.filter(x=>x.c===p.c&&x.id!==p.id).slice(0,4);
+  const vis=visibleDB();
+  const similar=vis.filter(x=>x.c===p.c&&x.id!==p.id).slice(0,4);
   const alsoCats=alsoMap[p.c]||[];
-  const also=DB.filter(x=>alsoCats.includes(x.c)).sort((a,b)=>(b.best?1:0)-(a.best?1:0)).slice(0,4);
+  const also=vis.filter(x=>alsoCats.includes(x.c)).sort((a,b)=>(b.best?1:0)-(a.best?1:0)).slice(0,4);
+  const hasVariants=p.isVariantPrimary && Array.isArray(p.variants) && p.variants.length>1;
+  const initialVariant=hasVariants?p.variants[0]:null;
+  const initialImg=initialVariant?initialVariant.img:p.img;
+  const pillsHtml=hasVariants?`
+    <div class="pd-variants" role="radiogroup" aria-label="${LANG==='ar'?'الحجم':'Size'}">
+      <span class="pd-variants-label">${LANG==='ar'?'الحجم':'Size'}:</span>
+      <div class="v-pills">
+        ${p.variants.map((v,i)=>`<button type="button" class="v-pill ${i===0?'on':''}" data-vi="${i}" role="radio" aria-checked="${i===0?'true':'false'}" onclick="selectVariant(${p.id},${i})">${esc(vlabel(v))}</button>`).join('')}
+      </div>
+    </div>`:'';
   document.getElementById('pdContent').innerHTML=`
     <div class="crumb"><a onclick="go('home')">${t('backHome')}</a> / <a onclick="FILTER='${p.c}';go('home','catalog');renderChips();renderProducts()">${cname(p.c)}</a> / ${esc(pname(p))}</div>
-    <div class="pd-grid">
-      <div class="pd-visual ${p.g}">
+    <div class="pd-grid" data-primary-id="${p.id}">
+      <div class="pd-visual ${p.g}" id="pdVisual">
         ${p.best?`<span class="tag-best" style="top:16px">${p.top?t('top'):t('best')}</span>`:''}
-        ${artInner(p)}
+        <div class="pd-img-wrap">${initialImg?`<img id="pdImg" src="${esc(initialImg)}" alt="${esc(p.en)}" loading="eager">`:(icons[p.i]||icons.mug)}</div>
       </div>
       <div class="pd-info">
         <h1>${esc(pname(p))}</h1>
         <div class="ar2" dir="${LANG==='en'?'rtl':'ltr'}" style="text-align:start">${esc(LANG==='en'?(p.ar||''):p.en)}</div>
         <span class="cat-link" onclick="FILTER='${p.c}';go('home','catalog');renderChips();renderProducts()">${cname(p.c)}</span>
-        <div class="pd-price">${fmtPrice(p.p)}</div>
-        <div class="pd-row">
-          ${hasPrice(p.p)?`<div class="qty"><button onclick="pdQty(-1)">−</button><span id="pdQty">1</span><button onclick="pdQty(1)">+</button></div>
-          <button class="btn btn-primary" onclick="addToCart(${p.id},parseInt(document.getElementById('pdQty').textContent),this)">${t('addCart')}</button>`
-          :`<a class="btn btn-primary" href="https://wa.me/${WA_NUMBER}?text=${encodeURIComponent((LANG==='ar'?'مرحباً، ما سعر':'Hi, what\'s the price of')+': '+pname(p)+(p.sku?` (${p.sku})`:'')+'?')}" target="_blank" rel="noopener">${t('contactPrice')}</a>`}
-        </div>
+        ${pillsHtml}
+        <div class="pd-price" id="pdPrice">${fmtPrice(initialVariant?initialVariant.p:p.p)}</div>
+        <div class="pd-row" id="pdRow">${pdCtaHtml(hasVariants?initialVariant:p)}</div>
       </div>
     </div>
     ${similar.length?`<div class="rail-sec"><div class="rail-head"><h2>${t('similar')}</h2></div><div class="rail">${similar.map(prodCard).join('')}</div></div>`:''}
@@ -772,6 +816,30 @@ function renderProductPage(id){
 function pdQty(d){
   const el=document.getElementById('pdQty');
   el.textContent=Math.max(1,parseInt(el.textContent)+d);
+}
+function pdCtaHtml(target){
+  const askUrl=`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent((LANG==='ar'?'مرحباً، ما سعر':'Hi, what\'s the price of')+': '+(byId(target.id)?pname(byId(target.id)):(target.en||''))+(target.sku?` (${target.sku})`:'')+'?')}`;
+  if(hasPrice(target.p)) return `<div class="qty"><button onclick="pdQty(-1)">−</button><span id="pdQty">1</span><button onclick="pdQty(1)">+</button></div>
+    <button class="btn btn-primary" onclick="addToCart(${target.id},parseInt(document.getElementById('pdQty').textContent),this)">${t('addCart')}</button>`;
+  return `<a class="btn btn-primary" href="${askUrl}" target="_blank" rel="noopener">${t('contactPrice')}</a>`;
+}
+function selectVariant(primaryId,ix){
+  const p=byId(primaryId); if(!p||!p.variants) return;
+  const v=p.variants[ix]; if(!v) return;
+  document.querySelectorAll('.v-pill').forEach((el,i)=>{el.classList.toggle('on',i===ix);el.setAttribute('aria-checked',i===ix?'true':'false')});
+  document.getElementById('pdPrice').innerHTML=fmtPrice(v.p);
+  document.getElementById('pdRow').innerHTML=pdCtaHtml(v);
+  const img=document.getElementById('pdImg');
+  const wrap=document.querySelector('.pd-img-wrap');
+  const targetSrc=v.img||p.img;
+  if(!targetSrc){ if(img){img.remove();} wrap.innerHTML=(icons[p.i]||icons.mug); return; }
+  if(!img){ wrap.innerHTML=`<img id="pdImg" src="${esc(targetSrc)}" alt="" loading="eager">`; return; }
+  if(img.getAttribute('src')===targetSrc) return;
+  img.classList.add('swap');
+  const pre=new Image();
+  pre.onload=()=>{ img.src=targetSrc; requestAnimationFrame(()=>img.classList.remove('swap')); };
+  pre.onerror=()=>{ img.classList.remove('swap'); };
+  pre.src=targetSrc;
 }
 
 /* ── CHECKOUT ── */

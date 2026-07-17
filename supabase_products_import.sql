@@ -167,6 +167,73 @@ ON CONFLICT (sku) DO UPDATE SET
   images    = EXCLUDED.images;
 -- Note: price is intentionally NOT overwritten so admin edits are preserved.
 
--- 4. Reset the id sequence so new products added via admin get id 200+.
+-- 4. Variants: add columns, then tag SKU families as size options of one product.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_group    text;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_label_en text;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_label_ar text;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_order    numeric;
+CREATE INDEX IF NOT EXISTS products_variant_group_idx ON products (variant_group);
+
+-- family: lockfresh
+UPDATE products SET variant_group='lockfresh', variant_label_en='400ml', variant_label_ar='400 مل', variant_order=1 WHERE sku='TDN/30111';
+UPDATE products SET variant_group='lockfresh', variant_label_en='1.4L', variant_label_ar='1.4 ل', variant_order=2 WHERE sku='TDN/30113';
+UPDATE products SET variant_group='lockfresh', variant_label_en='2.3L', variant_label_ar='2.3 ل', variant_order=3 WHERE sku='TDN/30114';
+UPDATE products SET variant_group='lockfresh', variant_label_en='4L', variant_label_ar='4 ل', variant_order=4 WHERE sku='TDN/30115';
+
+-- family: roma
+UPDATE products SET variant_group='roma', variant_label_en='1.2L', variant_label_ar='1.2 ل', variant_order=1 WHERE sku='TDN/32007';
+UPDATE products SET variant_group='roma', variant_label_en='1.75L', variant_label_ar='1.75 ل', variant_order=2 WHERE sku='TDN/32008';
+UPDATE products SET variant_group='roma', variant_label_en='2.2L', variant_label_ar='2.2 ل', variant_order=3 WHERE sku='TDN/32009';
+
+-- family: ep-square
+UPDATE products SET variant_group='ep-square', variant_label_en='0.5L', variant_label_ar='0.5 ل', variant_order=1 WHERE sku='TEM/EP-145';
+UPDATE products SET variant_group='ep-square', variant_label_en='1L', variant_label_ar='1 ل', variant_order=2 WHERE sku='TEM/EP-146';
+UPDATE products SET variant_group='ep-square', variant_label_en='1.5L', variant_label_ar='1.5 ل', variant_order=3 WHERE sku='TEM/EP-147';
+UPDATE products SET variant_group='ep-square', variant_label_en='2L', variant_label_ar='2 ل', variant_order=4 WHERE sku='TEM/EP-148';
+
+-- family: ep-rect
+UPDATE products SET variant_group='ep-rect', variant_label_en='0.75L', variant_label_ar='0.75 ل', variant_order=1 WHERE sku='TEM/EP-155';
+UPDATE products SET variant_group='ep-rect', variant_label_en='1.75L', variant_label_ar='1.75 ل', variant_order=2 WHERE sku='TEM/EP-156';
+UPDATE products SET variant_group='ep-rect', variant_label_en='2.6L', variant_label_ar='2.6 ل', variant_order=3 WHERE sku='TEM/EP-157';
+
+-- family: ep-round
+UPDATE products SET variant_group='ep-round', variant_label_en='0.45L', variant_label_ar='0.45 ل', variant_order=1 WHERE sku='TEM/EP-160';
+UPDATE products SET variant_group='ep-round', variant_label_en='0.85L', variant_label_ar='0.85 ل', variant_order=2 WHERE sku='TEM/EP-161';
+UPDATE products SET variant_group='ep-round', variant_label_en='1.6L', variant_label_ar='1.6 ل', variant_order=3 WHERE sku='TEM/EP-163';
+
+-- family: ep-fridge-open
+UPDATE products SET variant_group='ep-fridge-open', variant_label_en='Slim', variant_label_ar='رفيع', variant_order=1 WHERE sku='TEM/EP-610';
+UPDATE products SET variant_group='ep-fridge-open', variant_label_en='Medium', variant_label_ar='وسط', variant_order=2 WHERE sku='TEM/EP-611';
+UPDATE products SET variant_group='ep-fridge-open', variant_label_en='Large', variant_label_ar='كبير', variant_order=3 WHERE sku='TEM/EP-612';
+
+-- family: ep-fridge-lid
+UPDATE products SET variant_group='ep-fridge-lid', variant_label_en='Slim', variant_label_ar='رفيع', variant_order=1 WHERE sku='TEM/EP-615';
+UPDATE products SET variant_group='ep-fridge-lid', variant_label_en='Medium', variant_label_ar='وسط', variant_order=2 WHERE sku='TEM/EP-616';
+UPDATE products SET variant_group='ep-fridge-lid', variant_label_en='Large', variant_label_ar='كبير', variant_order=3 WHERE sku='TEM/EP-617';
+
+-- family: dosthoff-steel
+UPDATE products SET variant_group='dosthoff-steel', variant_label_en='550ml', variant_label_ar='550 مل', variant_order=1 WHERE sku='GDF/VIN/SM550';
+UPDATE products SET variant_group='dosthoff-steel', variant_label_en='850ml', variant_label_ar='850 مل', variant_order=2 WHERE sku='GDF/VIN/SM850';
+UPDATE products SET variant_group='dosthoff-steel', variant_label_en='1.8L divided', variant_label_ar='1.8 ل مقسوم', variant_order=3 WHERE sku='GDF/VIN/SM1800C';
+
+-- family: linea-silicone
+UPDATE products SET variant_group='linea-silicone', variant_label_en='550ml', variant_label_ar='550 مل', variant_order=1 WHERE sku='TFL/FSQ/0698';
+UPDATE products SET variant_group='linea-silicone', variant_label_en='1.2L', variant_label_ar='1.2 ل', variant_order=2 WHERE sku='TFL/FSQ/0711';
+UPDATE products SET variant_group='linea-silicone', variant_label_en='1.75L', variant_label_ar='1.75 ل', variant_order=3 WHERE sku='TFL/FSQ/0735';
+UPDATE products SET variant_group='linea-silicone', variant_label_en='2L', variant_label_ar='2 ل', variant_order=4 WHERE sku='TFL/FSQ/9936';
+
+-- family: linea-round-bowl
+UPDATE products SET variant_group='linea-round-bowl', variant_label_en='1L', variant_label_ar='1 ل', variant_order=1 WHERE sku='TFL/SB/6898';
+UPDATE products SET variant_group='linea-round-bowl', variant_label_en='2L', variant_label_ar='2 ل', variant_order=2 WHERE sku='TFL/SB/6911';
+
+-- family: tak-strainer
+UPDATE products SET variant_group='tak-strainer', variant_label_en='1.6L', variant_label_ar='1.6 ل', variant_order=1 WHERE sku='TAK/511';
+UPDATE products SET variant_group='tak-strainer', variant_label_en='3.5L', variant_label_ar='3.5 ل', variant_order=2 WHERE sku='TAK/509';
+
+-- family: glass-mug-dw
+UPDATE products SET variant_group='glass-mug-dw', variant_label_en='9cm', variant_label_ar='9 سم', variant_order=1 WHERE sku='GTM250-9';
+UPDATE products SET variant_group='glass-mug-dw', variant_label_en='12cm', variant_label_ar='12 سم', variant_order=2 WHERE sku='GTM350-12';
+
+-- 5. Reset the id sequence so new products added via admin get id 200+.
 SELECT setval(pg_get_serial_sequence('products','id'), 200, false);
 
