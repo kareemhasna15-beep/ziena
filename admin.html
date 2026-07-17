@@ -125,8 +125,13 @@ const icons={
 };
 const categories=[
  {id:'dinner',en:'Dinnerware'},{id:'coffee',en:'Tea & Coffee'},{id:'drink',en:'Mugs & Drinkware'},
- {id:'cutlery',en:'Cutlery'},{id:'serve',en:'Serveware & Trays'},{id:'tissue',en:'Tissue Boxes'},{id:'decor',en:'Home Décor'},
+ {id:'cutlery',en:'Cutlery'},{id:'serve',en:'Serveware & Trays'},{id:'kitchen',en:'Kitchen Storage'},
+ {id:'tissue',en:'Tissue Boxes'},{id:'decor',en:'Home Décor'},
 ];
+const IMG_BASE='website_images/';
+const imgSrc=f=>f?(f.startsWith('http')||f.startsWith('/')||f.startsWith(IMG_BASE)?f:IMG_BASE+f):'';
+const parseImages=raw=>String(raw||'').split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+const productImages=p=>Array.isArray(p.images)?p.images:(p.image_url?[p.image_url]:[]);
 const cname=id=>{const c=categories.find(c=>c.id===id);return c?c.en:id};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
@@ -249,17 +254,24 @@ function render(){
   }
   if(TAB==='products'){
     const ed=editingId!==null?PRODUCTS.find(p=>p.id===editingId):null;
+    const edImgs=ed?productImages(ed):[];
     body=`
     <div class="panel"><h3>${ed?'Edit product':'Add new product'}</h3>
       <div class="fgrid">
         <div class="fg"><label>Name (English)</label><input id="fEn" value="${ed?esc(ed.en):''}"></div>
         <div class="fg"><label>Name (Arabic)</label><input id="fAr" dir="rtl" value="${ed?esc(ed.ar||''):''}"></div>
-        <div class="fg"><label>Price (USD)</label><input id="fP" type="number" step="0.5" value="${ed?ed.price:''}"></div>
+        <div class="fg"><label>SKU / Code</label><input id="fSku" dir="ltr" placeholder="e.g. TDN/32007" value="${ed?esc(ed.sku||''):''}"></div>
+        <div class="fg"><label>Barcode (optional)</label><input id="fBar" dir="ltr" value="${ed?esc(ed.barcode||''):''}"></div>
+        <div class="fg"><label>Retail Price (USD) — blank = "Contact for price"</label><input id="fP" type="number" step="0.5" placeholder="leave blank if not set yet" value="${ed&&ed.price!=null?ed.price:''}"></div>
+        <div class="fg"><label>Cost (USD) — internal, never shown to customers</label><input id="fCost" type="number" step="0.01" value="${ed&&ed.cost_usd!=null?ed.cost_usd:''}"></div>
         <div class="fg"><label>Category</label><select id="fC">
           ${categories.map(c=>`<option value="${c.id}" ${ed&&ed.category===c.id?'selected':''}>${c.en}</option>`).join('')}</select></div>
         <div class="fg"><label>Best seller</label><select id="fB"><option value="">No</option><option value="1" ${ed&&ed.best?'selected':''}>Yes</option></select></div>
-        <div class="fg"><label>Photo URL (optional)</label><input id="fImg" dir="ltr" placeholder="https://..." value="${ed?esc(ed.image_url||''):''}"></div>
-        <div class="fg full"><label>Icon (used when no photo)</label>
+        <div class="fg full"><label>Images — one filename per line or comma-separated. First image is the main.</label>
+          <textarea id="fImgs" rows="3" dir="ltr" style="width:100%;padding:11px 13px;border:1.5px solid var(--blush-2);border-radius:10px;font-size:.92rem;background:#FDFBFC;font-family:inherit" placeholder="TDN-32007.jpg&#10;TDN-32007_2.jpg">${esc(edImgs.join('\n'))}</textarea>
+          <p class="muted" style="margin-top:6px">Filenames are looked up in <code>website_images/</code>. Full https:// URLs also work.</p>
+        </div>
+        <div class="fg full"><label>Icon (fallback when no image)</label>
           <div class="icon-pick" id="iconPick">
           ${Object.keys(icons).map(k=>`<button class="${(ed?ed.icon:pickedIcon)===k?'on':''}" title="${k}"
             onclick="pickedIcon='${k}';document.querySelectorAll('#iconPick button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${icons[k]}</button>`).join('')}
@@ -271,14 +283,19 @@ function render(){
       </div>
     </div>
     <div class="panel"><h3>All products (${PRODUCTS.length})</h3>
-      <table><tr><th>Name</th><th>Category</th><th>Price</th><th>Best</th><th>Photo</th><th></th></tr>
-      ${PRODUCTS.map(p=>`<tr>
+      <table><tr><th>SKU</th><th>Name</th><th>Category</th><th>Price</th><th>Cost</th><th>Imgs</th><th>Best</th><th></th></tr>
+      ${PRODUCTS.map(p=>{const n=productImages(p).length;return `<tr>
+        <td><code style="font-size:.78rem">${esc(p.sku||'')}</code></td>
         <td>${esc(p.en)}<br><span class="muted" dir="rtl" style="display:inline-block">${esc(p.ar||'')}</span></td>
-        <td>${cname(p.category)}</td><td>$${p.price}</td><td>${p.best?'★':''}</td><td>${p.image_url?'🖼':''}</td>
+        <td>${cname(p.category)}</td>
+        <td>${p.price!=null?'$'+p.price:'<span class="muted">— ask —</span>'}</td>
+        <td class="muted">${p.cost_usd!=null?'$'+p.cost_usd:''}</td>
+        <td>${n>0?(n>1?`🖼×${n}`:'🖼'):''}</td>
+        <td>${p.best?'★':''}</td>
         <td style="white-space:nowrap">
           <button class="act edit" onclick="editingId=${p.id};pickedIcon='${p.icon||'mug'}';render();window.scrollTo({top:0})">Edit</button>
           <button class="act del" onclick="delProduct(${p.id},'${esc(p.en).replace(/'/g,"\\'")}')">Delete</button>
-        </td></tr>`).join('')}
+        </td></tr>`}).join('')}
       </table>
     </div>`;
   }
@@ -333,7 +350,7 @@ function render(){
         <label>Add item</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <select id="mProd" style="flex:2;min-width:220px;padding:11px 13px;border:1.5px solid var(--blush-2);border-radius:10px;background:#FDFBFC">
-            ${PRODUCTS.map(p=>`<option value="${p.id}">${esc(p.en)} — $${p.price}</option>`).join('')}
+            ${PRODUCTS.map(p=>`<option value="${p.id}">${esc(p.en)}${p.price!=null?' — $'+p.price:' — (no price set)'}</option>`).join('')}
           </select>
           <input id="mQty" type="number" min="1" value="1" style="width:90px;padding:11px 13px;border:1.5px solid var(--blush-2);border-radius:10px;background:#FDFBFC">
           <button class="btn btn-g" onclick="mAdd()">+ Add</button>
@@ -459,17 +476,23 @@ async function refresh(){await loadAll();render();toast('Refreshed ✓')}
 async function saveProduct(){
   const en=document.getElementById('fEn').value.trim();
   const ar=document.getElementById('fAr').value.trim();
-  const price=parseFloat(document.getElementById('fP').value);
+  const rawPrice=document.getElementById('fP').value.trim();
+  const rawCost=document.getElementById('fCost').value.trim();
+  const price=rawPrice===''?null:parseFloat(rawPrice);
+  const cost_usd=rawCost===''?null:parseFloat(rawCost);
   const category=document.getElementById('fC').value;
   const best=!!document.getElementById('fB').value;
-  const image_url=document.getElementById('fImg').value.trim();
-  if(!en||isNaN(price)){toast('Name and price are required');return}
+  const sku=document.getElementById('fSku').value.trim();
+  const barcode=document.getElementById('fBar').value.trim();
+  const images=parseImages(document.getElementById('fImgs').value);
+  if(!en){toast('Name is required');return}
+  if(price!==null && isNaN(price)){toast('Price must be a number or blank');return}
+  const row={en,ar,sku:sku||null,barcode:barcode||null,price,cost_usd,category,best,icon:pickedIcon,images};
   if(DEMO){
-    if(editingId!==null){Object.assign(demoProducts.find(p=>p.id===editingId),{en,ar,price,category,best,icon:pickedIcon,image_url});editingId=null;}
-    else demoProducts.push({id:++demoSeq,en,ar,price,category,best,icon:pickedIcon,image_url});
+    if(editingId!==null){Object.assign(demoProducts.find(p=>p.id===editingId),row);editingId=null;}
+    else demoProducts.push({id:++demoSeq,...row});
     render();toast('Saved ✓ (demo)');return;
   }
-  const row={en,ar,price,category,best,icon:pickedIcon,image_url};
   let error;
   if(editingId!==null){({error}=await sb.from('products').update(row).eq('id',editingId));editingId=null;}
   else{row.gradient=['g1','g2','g3','g4','g5'][Math.floor(Math.random()*5)];({error}=await sb.from('products').insert(row));}
@@ -487,9 +510,10 @@ function mAdd(){
   const pid=+document.getElementById('mProd').value;
   const qty=Math.max(1,parseInt(document.getElementById('mQty').value)||1);
   const p=PRODUCTS.find(x=>x.id===pid);if(!p)return;
+  const unit=p.price!=null?+p.price:0;
   const existing=mItems.find(i=>i.pid===pid);
   if(existing)existing.qty+=qty;
-  else mItems.push({pid,name:p.en,qty,unit:+p.price});
+  else mItems.push({pid,name:p.en,qty,unit});
   render();
 }
 function mRemove(ix){mItems.splice(ix,1);render();}

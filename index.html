@@ -59,6 +59,9 @@ html[dir="rtl"] .nav-links{letter-spacing:0;text-transform:none;font-size:.95rem
 .btn-add{background:var(--magenta);color:#fff;border:none;border-radius:999px;padding:9px 18px;font-size:.8rem;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.22s}
 .btn-add:hover{background:var(--magenta-deep)}
 .btn-add.added{background:var(--ok)}
+.btn-add.btn-ask{background:#25D366;color:#fff}
+.btn-add.btn-ask:hover{background:#128C7E}
+.price-ask{font-size:.86em;font-weight:600;color:var(--gold);letter-spacing:.02em}
 section{padding:70px 0}
 .sec-head{text-align:center;max-width:620px;margin:0 auto 46px}
 .sec-head h2{font-size:clamp(1.9rem,3.6vw,2.7rem);color:var(--plum)}
@@ -489,7 +492,7 @@ const T = {
   footL1:'Home & Kitchen Accessories · Lebanon',footL2:'© 2026 Zeina. All rights reserved.',
   all:'All',items:'items',top:'★ Top Seller',best:'Best Seller',addCart:'Add to cart',added:'Added ✓',
   cartTitle:'Your Cart',total:'Total',checkoutBtn:'Checkout',emptyCart:'Your cart is empty.',remove:'Remove',
-  similar:'Similar products',alsoBuy:'Customers also buy',backHome:'Home',
+  similar:'Similar products',alsoBuy:'Customers also buy',backHome:'Home',contactPrice:'Contact for price',
   coTitle:'Checkout',coName:'Full name',coPhone:'Phone number',coAddr:'Delivery address',coNote:'Note (optional)',
   coSummary:'Order summary',coSend:'Place order',coHint:'Cash on delivery — no online payment. We will contact you to confirm.',
   coDone:'Order placed!',doneTitle:'Order received! 🎉',doneNo:'Order number',
@@ -510,7 +513,7 @@ const T = {
   footL1:'إكسسوارات المنزل والمطبخ · لبنان',footL2:'© ٢٠٢٦ زينة. جميع الحقوق محفوظة.',
   all:'الكل',items:'قطعة',top:'★ الأعلى مبيعاً',best:'الأكثر مبيعاً',addCart:'أضيفي للسلة',added:'أُضيفت ✓',
   cartTitle:'سلة التسوق',total:'المجموع',checkoutBtn:'إتمام الطلب',emptyCart:'السلة فارغة.',remove:'حذف',
-  similar:'منتجات مشابهة',alsoBuy:'الزبائن يشترون أيضاً',backHome:'الرئيسية',
+  similar:'منتجات مشابهة',alsoBuy:'الزبائن يشترون أيضاً',backHome:'الرئيسية',contactPrice:'اتصل للسعر',
   coTitle:'إتمام الطلب',coName:'الاسم الكامل',coPhone:'رقم الهاتف',coAddr:'عنوان التوصيل',coNote:'ملاحظة (اختياري)',
   coSummary:'ملخص الطلب',coSend:'تأكيد الطلب',coHint:'الدفع عند الاستلام — لا يوجد دفع إلكتروني. سنتواصل معك للتأكيد.',
   coDone:'تم استلام الطلب!',doneTitle:'تم استلام طلبك! 🎉',doneNo:'رقم الطلب',
@@ -552,10 +555,13 @@ const categories=[
  {id:'drink',  en:'Mugs & Drinkware', ar:'أكواب ومشروبات', icon:'mug',    descEn:'Mugs, glasses & thermoses',descAr:'أكواب وكاسات وترامس'},
  {id:'cutlery',en:'Cutlery',          ar:'أدوات مائدة',    icon:'cutlery',descEn:'Gold & silver flatware sets',descAr:'أطقم ملاعق وشوك ذهبية'},
  {id:'serve',  en:'Serveware & Trays',ar:'صواني وتقديم',   icon:'tray',   descEn:'Trays, bowls, stands & coasters',descAr:'صواني وأوعية وقواعد'},
+ {id:'kitchen',en:'Kitchen Storage',  ar:'تنظيم المطبخ',   icon:'basket', descEn:'Jars, storage boxes & fridge organizers',descAr:'برطمانات وعلب تخزين ومنظّمات ثلاجة'},
  {id:'tissue', en:'Tissue Boxes',     ar:'علب محارم',      icon:'tissue', descEn:'Porcelain, marble & ceramic designs',descAr:'بورسلان ورخام وسيراميك'},
  {id:'decor',  en:'Home Décor',       ar:'ديكور منزلي',    icon:'vase',   descEn:'Vases, mirrors, lamps & accents',descAr:'فازات ومرايا ومصابيح'},
 ];
-const alsoMap={dinner:['cutlery','serve','tissue'],coffee:['drink','serve','tissue'],drink:['coffee','serve'],cutlery:['dinner','serve'],serve:['coffee','dinner'],tissue:['decor','serve'],decor:['tissue','serve']};
+const alsoMap={dinner:['cutlery','serve','tissue'],coffee:['drink','serve','tissue'],drink:['coffee','serve'],cutlery:['dinner','serve'],serve:['coffee','dinner','kitchen'],kitchen:['serve','decor'],tissue:['decor','serve'],decor:['tissue','serve']};
+const IMG_BASE='website_images/';
+const imgSrc=f=>f?(f.startsWith('http')||f.startsWith('/')||f.startsWith(IMG_BASE)?f:IMG_BASE+f):'';
 
 /* ── State ── */
 let DB=[], ORDERS=[], cart=store.get('zeina_cart')||{};
@@ -568,8 +574,10 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&
 const saveCart=()=>store.set('zeina_cart',cart);
 
 function priceVal(usd){return usd*PRICE_MULTIPLIER}
+function hasPrice(p){return p!=null && p!=='' && !isNaN(+p) && +p>0}
 function fmtPrice(usd){
-  const v=priceVal(usd);
+  if(!hasPrice(usd))return `<span class="price-ask">${t('contactPrice')}</span>`;
+  const v=priceVal(+usd);
   if(CUR==='USD')return '$'+(v%1?v.toFixed(2):v.toFixed(0));
   const lbp=Math.round(v*LBP_RATE/500)*500;
   return lbp.toLocaleString(LANG==='ar'?'ar-LB':'en-US')+' ل.ل';
@@ -580,11 +588,23 @@ function fmtPriceTotal(){
   const lbp=Math.round(v*LBP_RATE/500)*500;
   return lbp.toLocaleString(LANG==='ar'?'ar-LB':'en-US')+' ل.ل';
 }
+function cartablePrice(p){return hasPrice(p&&p.p)}
 
 /* ── Supabase data layer ── */
-function rowToProduct(r){return {id:r.id,en:r.en,ar:r.ar,c:r.category,p:+r.price,i:r.icon||'mug',g:r.gradient||'g1',best:r.best,top:r.top_seller,img:r.image_url||''}}
+function rowToProduct(r){
+  const arr=Array.isArray(r.images)?r.images:(r.image_url?[r.image_url]:[]);
+  const images=arr.map(imgSrc).filter(Boolean);
+  return {
+    id:r.id, sku:r.sku||'', barcode:r.barcode||'',
+    en:r.en, ar:r.ar, c:r.category,
+    p:(r.price==null||r.price==='')?null:+r.price,
+    i:r.icon||'mug', g:r.gradient||'g1',
+    best:!!r.best, top:!!r.top_seller,
+    images, img:images[0]||''
+  };
+}
 async function loadProducts(){
-  if(DEMO){ if(!DB.length) DB=SEED.map(p=>({img:'',...p})); return true; }
+  if(DEMO){ if(!DB.length) DB=SEED.map(p=>({img:'',images:[],sku:'',...p})); return true; }
   const {data,error}=await sb.from('products').select('*').order('id');
   if(error){console.error(error);return false}
   DB=data.map(rowToProduct);return true;
@@ -605,13 +625,15 @@ function toast(msg){
 
 /* ── Cart ── */
 function addToCart(id,qty=1,btn){
+  const p=byId(id);
+  if(!p||!hasPrice(p.p)){toast(t('contactPrice'));return}
   cart[id]=(cart[id]||0)+qty;saveCart();renderCartBadge();renderDrawer();
   toast(t('toastAdd'));
   if(btn){btn.classList.add('added');const old=btn.innerHTML;btn.innerHTML=t('added');setTimeout(()=>{btn.classList.remove('added');btn.innerHTML=old;},1400);}
 }
 function setQty(id,q){ if(q<=0)delete cart[id];else cart[id]=q; saveCart();renderCartBadge();renderDrawer(); if(VIEW==='checkout')renderCheckout(); }
 function cartCount(){return Object.values(cart).reduce((a,b)=>a+b,0)}
-function cartTotal(){return Object.entries(cart).reduce((s,[id,q])=>{const p=byId(id);return p?s+priceVal(p.p)*q:s},0)}
+function cartTotal(){return Object.entries(cart).reduce((s,[id,q])=>{const p=byId(id);return (p&&hasPrice(p.p))?s+priceVal(+p.p)*q:s},0)}
 function renderCartBadge(){document.getElementById('cartCount').textContent=cartCount()}
 function toggleCart(open){
   document.getElementById('drawer').classList.toggle('open',open);
@@ -639,8 +661,18 @@ function renderDrawer(){
 
 /* ── Cards ── */
 const artInner=p=>p.img?`<img src="${esc(p.img)}" alt="${esc(p.en)}" loading="lazy">`:(icons[p.i]||icons.mug);
-const addBtn=id=>`<button class="btn-add" onclick="event.stopPropagation();addToCart(${id},1,this)">
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>${t('addCart')}</button>`;
+const askBtn=id=>{
+  const p=byId(id);
+  const msg=encodeURIComponent(`${LANG==='ar'?'مرحباً، ما سعر':'Hi, what\'s the price of'}: ${p?(LANG==='ar'?(p.ar||p.en):p.en):''}${p&&p.sku?` (${p.sku})`:''}?`);
+  return `<a class="btn-add btn-ask" href="https://wa.me/${WA_NUMBER}?text=${msg}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 12l6 6L20 6"/></svg>${t('contactPrice')}</a>`;
+};
+const addBtn=id=>{
+  const p=byId(id);
+  if(!hasPrice(p&&p.p)) return askBtn(id);
+  return `<button class="btn-add" onclick="event.stopPropagation();addToCart(${id},1,this)">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>${t('addCart')}</button>`;
+};
 const prodCard=p=>`
   <div class="prod" data-c="${p.c}">
     <div class="prod-art ${p.g}" onclick="go('product',${p.id})">
@@ -726,8 +758,9 @@ function renderProductPage(id){
         <span class="cat-link" onclick="FILTER='${p.c}';go('home','catalog');renderChips();renderProducts()">${cname(p.c)}</span>
         <div class="pd-price">${fmtPrice(p.p)}</div>
         <div class="pd-row">
-          <div class="qty"><button onclick="pdQty(-1)">−</button><span id="pdQty">1</span><button onclick="pdQty(1)">+</button></div>
-          <button class="btn btn-primary" onclick="addToCart(${p.id},parseInt(document.getElementById('pdQty').textContent),this)">${t('addCart')}</button>
+          ${hasPrice(p.p)?`<div class="qty"><button onclick="pdQty(-1)">−</button><span id="pdQty">1</span><button onclick="pdQty(1)">+</button></div>
+          <button class="btn btn-primary" onclick="addToCart(${p.id},parseInt(document.getElementById('pdQty').textContent),this)">${t('addCart')}</button>`
+          :`<a class="btn btn-primary" href="https://wa.me/${WA_NUMBER}?text=${encodeURIComponent((LANG==='ar'?'مرحباً، ما سعر':'Hi, what\'s the price of')+': '+pname(p)+(p.sku?` (${p.sku})`:'')+'?')}" target="_blank" rel="noopener">${t('contactPrice')}</a>`}
         </div>
       </div>
     </div>
