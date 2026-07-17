@@ -305,6 +305,67 @@ td{padding:11px 10px;border-bottom:1px solid var(--blush);vertical-align:middle}
 .pd-visual{cursor:default}
 .pd-visual:has(img){cursor:zoom-in}
 
+/* ── Categories browse ── */
+.cats-page{padding:56px 0 76px}
+.page-head{display:flex;align-items:center;gap:16px;margin-bottom:34px;flex-wrap:wrap}
+.back-btn{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--blush-2);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--magenta);font-size:1.3rem;line-height:1;flex-shrink:0;transition:.2s}
+.back-btn:hover{background:var(--blush);border-color:var(--magenta)}
+html[dir="rtl"] .back-btn svg{transform:scaleX(-1)}
+.page-head h1{font-family:'Cormorant Garamond',serif;font-size:clamp(1.7rem,3.2vw,2.3rem);color:var(--plum);flex:1;min-width:0}
+html[dir="rtl"] .page-head h1{font-family:'Tajawal',sans-serif;font-weight:700}
+.page-head .count{color:var(--gold);font-weight:600;font-size:.86rem;letter-spacing:.06em}
+.cat-browse-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+.cat-tile{position:relative;aspect-ratio:1/.85;border-radius:20px;overflow:hidden;cursor:pointer;border:1px solid var(--blush-2);background:linear-gradient(160deg,#fff,var(--blush));transition:.3s;display:flex;flex-direction:column;justify-content:flex-end;padding:20px 22px;min-width:0}
+.cat-tile:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:var(--gold-soft)}
+.cat-tile-img{position:absolute;inset:0;background-size:cover;background-position:center;transition:transform .4s ease}
+.cat-tile:hover .cat-tile-img{transform:scale(1.05)}
+.cat-tile-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(251,239,246,.45) 0%,rgba(74,10,48,.7) 100%);transition:.3s}
+.cat-tile:hover .cat-tile-overlay{background:linear-gradient(180deg,rgba(251,239,246,.35) 0%,rgba(74,10,48,.78) 100%)}
+.cat-tile-inner{position:relative;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.25)}
+.cat-tile-inner h3{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;line-height:1.15;overflow-wrap:break-word}
+html[dir="rtl"] .cat-tile-inner h3{font-family:'Tajawal',sans-serif;font-weight:700}
+.cat-tile-count{display:inline-block;margin-top:6px;background:rgba(255,255,255,.85);color:var(--plum);padding:3px 12px;border-radius:999px;font-size:.75rem;font-weight:600;text-shadow:none;letter-spacing:.02em}
+.cat-tile.no-photo{background:linear-gradient(160deg,var(--blush) 0%,var(--blush-2) 100%)}
+.cat-tile.no-photo .cat-tile-overlay{background:linear-gradient(180deg,transparent 0%,rgba(74,10,48,.55) 100%)}
+
+/* Category listing */
+.cat-listing{padding:44px 0 70px}
+.cat-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px;flex-wrap:wrap}
+.cat-sort{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--ink-soft)}
+.cat-sort select{padding:9px 14px;border:1.5px solid var(--blush-2);border-radius:999px;background:#fff;font-family:inherit;font-size:.86rem;font-weight:500;color:var(--ink);cursor:pointer}
+.cat-sort select:focus{outline:none;border-color:var(--magenta)}
+
+/* Search icon + overlay */
+.search-btn{background:transparent;border:1.5px solid var(--blush-2);color:var(--magenta);width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;flex-shrink:0}
+.search-btn:hover{background:var(--blush);border-color:var(--magenta)}
+.search-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
+.search-overlay{position:fixed;inset:0;background:rgba(255,251,247,.98);backdrop-filter:blur(10px);z-index:80;display:none;flex-direction:column;overflow-y:auto;overscroll-behavior:contain}
+.search-overlay.open{display:flex}
+.search-head{position:sticky;top:0;background:rgba(255,251,247,.98);backdrop-filter:blur(10px);border-bottom:1px solid var(--blush-2);padding:16px 0;z-index:1}
+.search-bar{display:flex;align-items:center;gap:10px;max-width:900px;margin:0 auto;padding:0 22px;width:100%}
+.search-bar-icon{color:var(--ink-soft);flex-shrink:0}
+.search-bar input{flex:1;min-width:0;background:transparent;border:none;font-family:inherit;font-size:1.15rem;padding:12px 6px;color:var(--ink)}
+.search-bar input:focus{outline:none}
+.search-close{background:transparent;border:none;color:var(--ink-soft);cursor:pointer;font-size:1.6rem;line-height:1;padding:4px 10px;transition:.2s}
+.search-close:hover{color:var(--magenta)}
+.search-body{max-width:1180px;margin:0 auto;padding:22px}
+.search-count{font-size:.82rem;color:var(--ink-soft);margin-bottom:16px;letter-spacing:.02em}
+.search-empty{text-align:center;padding:60px 20px;color:var(--ink-soft)}
+.search-empty h3{font-family:'Cormorant Garamond',serif;color:var(--plum);font-size:1.5rem;margin-bottom:8px}
+html[dir="rtl"] .search-empty h3{font-family:'Tajawal',sans-serif;font-weight:700}
+.search-empty a{color:var(--magenta);font-weight:600;border-bottom:1px solid var(--magenta);padding-bottom:1px;cursor:pointer}
+mark.q{background:var(--gold-soft);color:var(--plum);font-weight:600;padding:0 2px;border-radius:3px}
+
+@media(max-width:520px){
+  .cats-page,.cat-listing{padding:34px 0 54px}
+  .cat-browse-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+  .cat-tile{padding:14px 16px;aspect-ratio:1/.95;border-radius:16px}
+  .cat-tile-inner h3{font-size:1.1rem}
+  .cat-tile-count{font-size:.68rem;padding:3px 10px}
+  .search-bar input{font-size:1rem}
+  .search-body{padding:16px}
+}
+
 /* ── Splash intro ── */
 .splash{position:fixed;inset:0;z-index:200;background:radial-gradient(circle at 50% 40%,#FFF5FA 0%,var(--blush) 55%,var(--blush-2) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overscroll-behavior:contain;touch-action:none;will-change:transform;transform:translateY(0);transition:transform .6s cubic-bezier(.22,.61,.36,1)}
 .splash.dismissing{transform:translateY(-100%)}
@@ -393,13 +454,16 @@ html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95r
     </a>
     <nav class="nav-links" id="navLinks">
       <a onclick="go('home','bestsellers')" data-t="navBest"></a>
-      <a onclick="go('home','categories')" data-t="navCats"></a>
+      <a onclick="go('categories')" data-t="navCats"></a>
       <a onclick="go('home','catalog')" data-t="navCatalog"></a>
       <a onclick="go('home','contact')" data-t="navContact"></a>
     </nav>
     <div class="nav-right">
       <div class="toggle" id="langToggle"><button data-lang="en" class="on">EN</button><button data-lang="ar">ع</button></div>
       <div class="toggle" id="curToggle"><button data-cur="USD" class="on">$</button><button data-cur="LBP">ل.ل</button></div>
+      <button class="search-btn" id="searchBtn" onclick="openSearch()" aria-label="Search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      </button>
       <button class="cart-btn" onclick="toggleCart(true)" aria-label="Cart">
         <svg viewBox="0 0 24 24"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>
         <span class="cart-count" id="cartCount">0</span>
@@ -418,7 +482,7 @@ html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95r
         <p data-t="heroP"></p>
         <div class="hero-actions">
           <a class="btn btn-primary" onclick="go('home','bestsellers')" data-t="heroBtn1"></a>
-          <a class="btn btn-ghost" onclick="go('home','catalog')" data-t="heroBtn2"></a>
+          <a class="btn btn-ghost" onclick="go('categories')" data-t="heroBtn2"></a>
         </div>
       </div>
       <div class="hero-visual">
@@ -473,6 +537,19 @@ html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95r
 
 <div id="view-product" class="hiddenview"><div class="wrap pd" id="pdContent"></div></div>
 <div id="view-checkout" class="hiddenview"><section><div class="wrap"><div class="checkout-card" id="coContent"></div></div></section></div>
+<div id="view-categories" class="hiddenview"><section class="cats-page"><div class="wrap" id="catsPageContent"></div></section></div>
+<div id="view-category" class="hiddenview"><section class="cat-listing"><div class="wrap" id="catListingContent"></div></section></div>
+
+<div class="search-overlay" id="searchOverlay" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="search-head">
+    <div class="search-bar">
+      <svg class="search-bar-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="searchInput" type="search" autocomplete="off" spellcheck="false" aria-label="Search products">
+      <button class="search-close" id="searchClose" type="button" aria-label="Close">×</button>
+    </div>
+  </div>
+  <div class="search-body" id="searchBody"></div>
+</div>
 
 <footer>
   <span class="script">Zeina</span>
@@ -710,7 +787,7 @@ function rowToProduct(r){
   const images=arr.map(imgSrc).filter(Boolean);
   return {
     id:r.id, sku:r.sku||'', barcode:r.barcode||'',
-    en:r.en, ar:r.ar, c:r.category,
+    en:r.en, ar:r.ar, c:r.category, sub:r.sub_category||'',
     p:(r.price==null||r.price==='')?null:+r.price,
     i:r.icon||'mug', g:r.gradient||'g1',
     best:!!r.best, top:!!r.top_seller,
@@ -720,6 +797,50 @@ function rowToProduct(r){
     variantLabelAr:r.variant_label_ar||null,
     variantOrder:r.variant_order==null?null:+r.variant_order
   };
+}
+
+/* Sub-category display names. Fall back to raw value if a new one appears. */
+const CAT_NAMES={
+  'Baskets & Organizers':{ar:'سلال ومنظّمات'},
+  'Bowls':{ar:'جاطات'},
+  'Coffee & Tea Sets':{ar:'أطقم قهوة وشاي'},
+  'Cutlery':{ar:'أدوات مائدة'},
+  'Drinkware':{ar:'أكواب المشروبات'},
+  'Fridge Organizers':{ar:'منظّمات الثلاجة'},
+  'Glassware':{ar:'زجاج'},
+  'Jugs & Bottles':{ar:'أباريق وقنينات'},
+  'Kitchen Tools':{ar:'أدوات المطبخ'},
+  'Lamps':{ar:'مصابيح'},
+  'Mirrors':{ar:'مرايا'},
+  'Mugs':{ar:'ماغات'},
+  'Plates & Dinnerware':{ar:'صحون وأطقم سفرة'},
+  'Storage & Jars':{ar:'تخزين ومرطبانات'},
+  'Tissue Boxes':{ar:'علب محارم'},
+  'Trays':{ar:'صواني'},
+  'Vases & Decor':{ar:'فازات وديكور'}
+};
+const catName=raw=>{
+  if(!raw) return LANG==='ar'?'أخرى':'Other';
+  if(LANG==='en') return raw;
+  return (CAT_NAMES[raw]&&CAT_NAMES[raw].ar)||raw;
+};
+const slug=s=>String(s||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+function subFromSlug(sl){
+  const subs=[...new Set(DB.filter(p=>p.sub).map(p=>p.sub))];
+  return subs.find(s=>slug(s)===sl) || '';
+}
+function subsWithCounts(){
+  const map=new Map();
+  visibleDB().forEach(p=>{
+    const key=p.sub||'';
+    if(!key) return;
+    if(!map.has(key)) map.set(key,{count:0, coverImg:null});
+    const rec=map.get(key);
+    rec.count++;
+    if(!rec.coverImg && p.img) rec.coverImg=p.img;
+  });
+  return [...map.entries()].map(([sub,rec])=>({sub, count:rec.count, coverImg:rec.coverImg}))
+    .sort((a,b)=>b.count-a.count || a.sub.localeCompare(b.sub));
 }
 function annotateVariants(list){
   const groups={};
@@ -1153,20 +1274,220 @@ function renderOrderDone(orderId,entries,totalTxt,waMsg){
 }
 
 /* ── Router ── */
+const ALL_VIEWS=['home','product','checkout','categories','category'];
+function setDocTitle(){
+  const base=LANG==='ar'?'زينة — إكسسوارات المنزل والمطبخ':'Zeina — Home & Kitchen Accessories';
+  let suffix='';
+  if(VIEW==='categories') suffix=LANG==='ar'?'الأقسام':'Categories';
+  else if(VIEW==='category'){
+    const raw=subFromSlug((location.hash.match(/^#category\/(.+)$/)||[])[1]||'');
+    if(raw) suffix=catName(raw);
+  } else if(VIEW==='product'){
+    const p=byId((location.hash.match(/^#product-(.+)$/)||[])[1]);
+    if(p) suffix=pname(p);
+  } else if(VIEW==='checkout') suffix=LANG==='ar'?'إتمام الطلب':'Checkout';
+  document.title = suffix ? `${suffix} · ${base}` : base;
+}
 function go(view,arg){
   VIEW=view;
-  ['home','product','checkout'].forEach(v=>{
-    document.getElementById('view-'+v).classList.toggle('hiddenview',v!==view);
+  ALL_VIEWS.forEach(v=>{
+    const el=document.getElementById('view-'+v);
+    if(el) el.classList.toggle('hiddenview',v!==view);
   });
   toggleCart(false);
   if(view==='home'){
-    history.replaceState(null,'',location.pathname);
+    if(location.hash) history.replaceState(null,'',location.pathname);
     renderHome();
     if(arg){setTimeout(()=>{const el=document.getElementById(arg);if(el)el.scrollIntoView({behavior:'smooth'});},60);}
     else window.scrollTo({top:0});
   }
-  if(view==='product'){location.hash='product-'+arg;renderProductPage(arg);}
-  if(view==='checkout'){location.hash='checkout';renderCheckout();window.scrollTo({top:0});}
+  if(view==='product'){ if(location.hash!=='#product-'+arg) location.hash='product-'+arg; renderProductPage(arg);}
+  if(view==='checkout'){ if(location.hash!=='#checkout') location.hash='checkout'; renderCheckout();window.scrollTo({top:0});}
+  if(view==='categories'){ if(location.hash!=='#categories') location.hash='categories'; renderCategoriesView(); window.scrollTo({top:0}); }
+  if(view==='category'){
+    const wantHash='#category/'+slug(arg);
+    if(location.hash!==wantHash) location.hash=wantHash;
+    renderCategoryListing(arg); window.scrollTo({top:0});
+  }
+  setDocTitle();
+}
+function hashRoute(){
+  const h=location.hash;
+  if(h==='#search'){ openSearch(true); return; }
+  else if(SEARCH_OPEN){ closeSearch(true); }
+  if(h.startsWith('#product-')){ if(VIEW!=='product'||h!==('#product-'+(PD_CURRENT&&PD_CURRENT.id))) go('product',h.replace('#product-','')); return; }
+  if(h==='#checkout'){ if(VIEW!=='checkout') go('checkout'); return; }
+  if(h==='#categories'){ if(VIEW!=='categories') go('categories'); return; }
+  if(h.startsWith('#category/')){
+    const raw=subFromSlug(h.replace('#category/',''));
+    if(!raw){ go('categories'); return; }
+    if(VIEW!=='category' || currentCategorySub!==raw) go('category',raw);
+    return;
+  }
+  if(!h||h==='#'){ if(VIEW!=='home') go('home'); return; }
+}
+
+/* ── Categories view ── */
+let CAT_SORT='newest', currentCategorySub='';
+function renderCategoriesView(){
+  const subs=subsWithCounts();
+  const el=document.getElementById('catsPageContent');
+  el.innerHTML=`
+    <div class="page-head">
+      <button class="back-btn" onclick="go('home')" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <h1>${LANG==='ar'?'الأقسام':'Categories'}</h1>
+      <span class="count">${subs.length} ${LANG==='ar'?'قسم':'sections'}</span>
+    </div>
+    <div class="cat-browse-grid">
+      ${subs.map(r=>`
+        <div class="cat-tile ${r.coverImg?'':'no-photo'}" onclick="go('category','${esc(r.sub)}')">
+          ${r.coverImg?`<div class="cat-tile-img" style="background-image:url('${esc(r.coverImg)}')"></div>`:''}
+          <div class="cat-tile-overlay"></div>
+          <div class="cat-tile-inner">
+            <h3>${esc(catName(r.sub))}</h3>
+            <span class="cat-tile-count">${r.count} ${LANG==='ar'?(r.count===1?'منتج':'منتجات'):(r.count===1?'product':'products')}</span>
+          </div>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+function renderCategoryListing(sub){
+  currentCategorySub=sub;
+  const raw=sub;
+  const items=visibleDB().filter(p=>p.sub===raw);
+  const sorted=sortProducts(items.slice(),CAT_SORT);
+  const el=document.getElementById('catListingContent');
+  const sortOpts=[
+    ['newest', LANG==='ar'?'الأحدث':'Newest'],
+    ['price_asc', LANG==='ar'?'السعر: من الأقل':'Price: low to high'],
+    ['price_desc', LANG==='ar'?'السعر: من الأعلى':'Price: high to low'],
+    ['name', LANG==='ar'?'الاسم':'Name A–Z'],
+  ];
+  el.innerHTML=`
+    <div class="page-head">
+      <button class="back-btn" onclick="go('categories')" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <h1>${esc(catName(raw))}</h1>
+      <span class="count">${items.length} ${LANG==='ar'?(items.length===1?'منتج':'منتجات'):(items.length===1?'product':'products')}</span>
+    </div>
+    <div class="cat-toolbar">
+      <div class="cat-sort">
+        <label for="catSortSel">${LANG==='ar'?'ترتيب':'Sort'}:</label>
+        <select id="catSortSel" onchange="CAT_SORT=this.value;renderCategoryListing(currentCategorySub)">
+          ${sortOpts.map(([v,l])=>`<option value="${v}" ${CAT_SORT===v?'selected':''}>${l}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="prod-grid">${sorted.map(prodCard).join('')}</div>
+  `;
+}
+
+function sortProducts(list,mode){
+  const hasP=p=>p.p!=null&&!isNaN(+p.p)&&+p.p>0;
+  if(mode==='newest') return list.sort((a,b)=>(+b.id||0)-(+a.id||0));
+  if(mode==='price_asc') return list.sort((a,b)=>{
+    if(hasP(a)&&!hasP(b)) return -1;
+    if(!hasP(a)&&hasP(b)) return 1;
+    if(!hasP(a)&&!hasP(b)) return (+b.id||0)-(+a.id||0);
+    return (+a.p)-(+b.p);
+  });
+  if(mode==='price_desc') return list.sort((a,b)=>{
+    if(hasP(a)&&!hasP(b)) return -1;
+    if(!hasP(a)&&hasP(b)) return 1;
+    if(!hasP(a)&&!hasP(b)) return (+b.id||0)-(+a.id||0);
+    return (+b.p)-(+a.p);
+  });
+  if(mode==='name') return list.sort((a,b)=>String(pname(a)).localeCompare(String(pname(b)),LANG==='ar'?'ar':'en'));
+  return list;
+}
+
+/* ── Search overlay ── */
+let SEARCH_OPEN=false, SEARCH_DEBOUNCE=null, SEARCH_TERM='';
+function normalize(s){ return String(s||'').toLowerCase(); }
+function highlight(text,q){
+  if(!q) return esc(text);
+  const nq=normalize(q);
+  const nt=normalize(text);
+  const i=nt.indexOf(nq);
+  if(i<0) return esc(text);
+  return esc(text.slice(0,i))+'<mark class="q">'+esc(text.slice(i,i+q.length))+'</mark>'+esc(text.slice(i+q.length));
+}
+function openSearch(fromHash){
+  const ov=document.getElementById('searchOverlay');
+  const input=document.getElementById('searchInput');
+  if(!ov) return;
+  if(!SEARCH_OPEN){
+    ov.classList.add('open');
+    ov.setAttribute('aria-hidden','false');
+    document.body.style.overflow='hidden';
+    SEARCH_OPEN=true;
+  }
+  input.placeholder=LANG==='ar'?'ابحث عن المنتجات، الأقسام، رمز SKU…':'Search products, categories, SKU…';
+  input.value=SEARCH_TERM;
+  renderSearchResults();
+  if(!fromHash && location.hash!=='#search') location.hash='search';
+  setTimeout(()=>input.focus({preventScroll:true}),20);
+}
+function closeSearch(fromHash){
+  const ov=document.getElementById('searchOverlay');
+  if(!ov||!SEARCH_OPEN) return;
+  ov.classList.remove('open');
+  ov.setAttribute('aria-hidden','true');
+  document.body.style.overflow='';
+  SEARCH_OPEN=false;
+  if(!fromHash && location.hash==='#search') history.back();
+}
+function renderSearchResults(){
+  const body=document.getElementById('searchBody');
+  const q=SEARCH_TERM.trim();
+  const vis=visibleDB();
+  if(!q){
+    body.innerHTML=`<div class="search-count">${LANG==='ar'?`اكتب للبحث في ${vis.length} منتج`:`Start typing to search across ${vis.length} products`}</div>`;
+    return;
+  }
+  const nq=normalize(q);
+  const results=vis.filter(p=>
+    normalize(p.en).includes(nq) ||
+    normalize(p.ar).includes(nq) ||
+    normalize(p.sku).includes(nq) ||
+    normalize(p.sub).includes(nq) ||
+    normalize(catName(p.sub)).includes(nq)
+  );
+  if(!results.length){
+    body.innerHTML=`
+      <div class="search-empty">
+        <h3>${LANG==='ar'?'لا توجد منتجات':'No products found'}</h3>
+        <p style="margin-top:6px">${LANG==='ar'?'جرّبي كلمة أخرى أو ':'Try a different word or '}
+          <a onclick="closeSearch();go('categories')">${LANG==='ar'?'تصفّحي الأقسام':'browse categories'}</a>.</p>
+      </div>`;
+    return;
+  }
+  const countTxt = LANG==='ar'
+    ? `${results.length} ${results.length===1?'نتيجة':'نتيجة'}`
+    : `${results.length} ${results.length===1?'result':'results'}`;
+  body.innerHTML=`
+    <div class="search-count">${countTxt}</div>
+    <div class="prod-grid">
+      ${results.map(p=>searchCard(p,q)).join('')}
+    </div>`;
+}
+function searchCard(p,q){
+  return `
+    <div class="prod" data-c="${p.c}">
+      <div class="prod-art ${p.g}" onclick="closeSearch();go('product',${p.id})">
+        ${p.best?`<span class="tag-best">${t('best')}</span>`:''}
+        ${artInner(p)}
+      </div>
+      <div class="prod-body">
+        <h3 onclick="closeSearch();go('product',${p.id})">${highlight(pname(p),q)}</h3>
+        <span class="price">${fmtPrice(p.p)}</span>
+        <div class="actions">${addBtn(p.id)}</div>
+      </div>
+    </div>`;
 }
 
 /* ── Events ── */
@@ -1190,10 +1511,28 @@ function refresh(){
   if(VIEW==='home')renderHome();
   if(VIEW==='product'){const id=location.hash.replace('#product-','');renderProductPage(id);}
   if(VIEW==='checkout')renderCheckout();
+  if(VIEW==='categories')renderCategoriesView();
+  if(VIEW==='category')renderCategoryListing(currentCategorySub);
+  if(SEARCH_OPEN)renderSearchResults();
+  setDocTitle();
 }
 const navEl=document.getElementById('navLinks');
 document.getElementById('burger').addEventListener('click',()=>navEl.classList.toggle('open'));
 navEl.addEventListener('click',()=>navEl.classList.remove('open'));
+
+document.getElementById('searchClose').addEventListener('click',()=>closeSearch());
+document.getElementById('searchOverlay').addEventListener('click',e=>{
+  if(e.target.id==='searchOverlay') closeSearch();
+});
+document.getElementById('searchInput').addEventListener('input',e=>{
+  SEARCH_TERM=e.target.value;
+  clearTimeout(SEARCH_DEBOUNCE);
+  SEARCH_DEBOUNCE=setTimeout(renderSearchResults,250);
+});
+document.getElementById('searchInput').addEventListener('keydown',e=>{
+  if(e.key==='Escape') closeSearch();
+});
+window.addEventListener('hashchange',hashRoute);
 
 /* ── Lightbox: fullscreen viewer with pinch/wheel zoom, pan, gallery swipe ── */
 function pdOpenLightbox(){
@@ -1812,7 +2151,11 @@ function initSplash(){
   await loadProducts();
   const h=location.hash;
   if(h==='#admin'){window.location.href='./admin.html';return;}
-  if(h.startsWith('#product-'))go('product',h.replace('#product-',''));
+  if(h.startsWith('#product-')) go('product',h.replace('#product-',''));
+  else if(h==='#checkout') go('checkout');
+  else if(h==='#categories') go('categories');
+  else if(h.startsWith('#category/')){ const raw=subFromSlug(h.replace('#category/','')); if(raw) go('category',raw); else go('categories'); }
+  else if(h==='#search'){ go('home'); openSearch(true); }
   else go('home');
 })();
 </script>
