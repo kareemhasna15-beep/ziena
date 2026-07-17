@@ -85,10 +85,18 @@ html[dir="rtl"] .eyebrow{letter-spacing:.05em}
 html[dir="rtl"] .hero h1 .script{font-family:'Tajawal',sans-serif;font-size:1em;font-weight:700}
 .hero p{color:var(--ink-soft);max-width:46ch;margin:14px 0 30px;font-size:1.05rem}
 .hero-actions{display:flex;gap:14px;flex-wrap:wrap}
-.hero-visual{position:relative;display:flex;justify-content:center}
-.hero-plate{width:min(360px,78%);max-width:100%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0%,var(--blush) 45%,var(--blush-2) 100%);border:1px solid var(--gold-soft);box-shadow:var(--shadow),inset 0 0 0 22px #fff,inset 0 0 0 24px var(--gold-soft);display:flex;align-items:center;justify-content:center;animation:float 7s ease-in-out infinite}
-.hero-plate svg{width:52%}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.hero-visual{position:relative;display:flex;justify-content:center;perspective:1400px}
+.coin-wrap{width:min(360px,78%);max-width:100%;aspect-ratio:1;position:relative;margin-bottom:52px;animation:float 7s ease-in-out infinite}
+.coin{position:relative;width:100%;height:100%;transform-style:preserve-3d;-webkit-transform-style:preserve-3d;cursor:pointer;touch-action:pan-y;will-change:transform;transition:none;user-select:none;-webkit-user-select:none}
+.coin.pressed{filter:brightness(.96)}
+.coin-face{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0%,var(--blush) 45%,var(--blush-2) 100%);border:1px solid var(--gold-soft);box-shadow:var(--shadow),inset 0 0 0 20px #fff,inset 0 0 0 22px var(--gold-soft);display:flex;align-items:center;justify-content:center;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.coin-back{transform:rotateY(180deg)}
+.coin-face img{max-width:64%;max-height:64%;width:auto;height:auto;object-fit:contain;-webkit-user-drag:none;user-drag:none;pointer-events:none;filter:drop-shadow(0 8px 18px rgba(140,13,84,.18));transition:opacity .35s ease}
+.coin-face.crossfading img.next{position:absolute;inset:0;margin:auto;opacity:0}
+.coin-label{position:absolute;bottom:-42px;left:0;right:0;text-align:center;font-family:'Cormorant Garamond',serif;color:var(--plum);font-size:1.12rem;letter-spacing:.02em;padding:0 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.92;transition:opacity .3s ease}
+html[dir="rtl"] .coin-label{font-family:'Tajawal',sans-serif;font-weight:600;font-size:1rem}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@media(prefers-reduced-motion:reduce){.coin-wrap{animation:none}}
 
 /* ── Marquee ── */
 .bestsellers{background:linear-gradient(180deg,#fff 0%,var(--blush) 100%);padding-bottom:86px}
@@ -414,13 +422,12 @@ html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95r
         </div>
       </div>
       <div class="hero-visual">
-        <div class="hero-plate">
-          <svg viewBox="0 0 100 100" fill="none" stroke="#BA1270" stroke-width="2" stroke-linecap="round">
-            <path d="M30 78 h40" stroke="#C29A4B"/>
-            <path d="M35 78 c0-16 4-20 4-30 0-8 22-8 22 0 0 10 4 14 4 30"/>
-            <path d="M61 55 h10 c8 0 8 12 0 12 h-8"/>
-            <ellipse cx="50" cy="34" rx="16" ry="5" stroke="#C29A4B"/>
-          </svg>
+        <div class="coin-wrap" id="heroCoinWrap">
+          <div class="coin" id="heroCoin" role="button" tabindex="0" aria-label="Featured product">
+            <div class="coin-face coin-front"><img alt="" id="coinFrontImg"></div>
+            <div class="coin-face coin-back"><img alt="" id="coinBackImg"></div>
+          </div>
+          <div class="coin-label" id="coinLabel"></div>
         </div>
       </div>
     </div>
@@ -1003,7 +1010,7 @@ function renderProducts(){
   if(!DB.length){grid.innerHTML=`<div class="loading">${t('loadFail')}</div>`;return}
   grid.innerHTML=visibleDB().filter(p=>FILTER==='all'||p.c===FILTER).map(prodCard).join('');
 }
-function renderHome(){renderStatic();renderBest();renderCats();renderChips();renderProducts();renderCartBadge();}
+function renderHome(){renderStatic();renderBest();renderCats();renderChips();renderProducts();renderCartBadge();initHeroCoin();}
 
 /* ── PRODUCT PAGE ── */
 function renderProductPage(id){
@@ -1171,6 +1178,7 @@ document.getElementById('langToggle').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;LANG=b.dataset.lang;
   document.querySelectorAll('#langToggle button').forEach(x=>x.classList.toggle('on',x===b));
   refresh();
+  window.dispatchEvent(new Event('zeinaLang'));
 });
 document.getElementById('curToggle').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;CUR=b.dataset.cur;
@@ -1505,6 +1513,210 @@ function unbindLb(){
   window.removeEventListener('resize',lbOnResize);
 }
 function lbOnResize(){ computeLbFit(); clampPan(); applyLb(false); }
+
+/* ── Hero coin: 3D spinning product showcase ── */
+let heroCoin=null;
+function initHeroCoin(){
+  const wrap=document.getElementById('heroCoinWrap');
+  const coinEl=document.getElementById('heroCoin');
+  const frontImg=document.getElementById('coinFrontImg');
+  const backImg=document.getElementById('coinBackImg');
+  const label=document.getElementById('coinLabel');
+  if(!wrap||!coinEl) return;
+  const vis=visibleDB();
+  const pool=vis.filter(p=>p.images&&p.images.length);
+  if(!pool.length){ coinEl.style.display='none'; label.textContent=''; return; }
+  pool.sort((a,b)=>((b.best?1:0)-(a.best?1:0))||((b.top?1:0)-(a.top?1:0)));
+  const items=pool.slice(0,20);
+  const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(heroCoin)heroCoin.destroy();
+  const S={
+    items, queueIdx:2%items.length,
+    frontIdx:0, backIdx:1%items.length,
+    angle:0, vAngle:0,
+    autoV:0.03,         // 30 deg/sec => 12s per rev
+    dragging:false, axis:null, dragDist:0,
+    startX:0, startY:0, lastX:0, lastT:0,
+    released:false, settled:false, snapTarget:0, releasedAt:0,
+    lastFrame:performance.now(), raf:0, dead:false, lastFrontVisible:true,
+    crossfadeTimer:null
+  };
+  const setImg=(el,item)=>{ el.src=item.img||''; el.alt=item.en||''; };
+  setImg(frontImg,items[S.frontIdx]);
+  setImg(backImg,items[S.backIdx]);
+  updateLabel();
+  function updateLabel(){
+    const it=facingItem();
+    label.textContent=pname(it);
+    label.style.direction=LANG==='ar'?'rtl':'ltr';
+  }
+  function facingItem(){
+    const mod=((S.angle%360)+360)%360;
+    return (mod<90||mod>270)?items[S.frontIdx]:items[S.backIdx];
+  }
+  function preload(idx){
+    const i=(idx%items.length+items.length)%items.length;
+    const it=items[i]; if(!it||!it.img) return;
+    const im=new Image(); im.src=it.img;
+  }
+  function swapHiddenFace(){
+    const mod=((S.angle%360)+360)%360;
+    const frontVisible=mod<90||mod>270;
+    const it=items[S.queueIdx];
+    if(frontVisible){
+      setImg(backImg,it); S.backIdx=S.queueIdx;
+    } else {
+      setImg(frontImg,it); S.frontIdx=S.queueIdx;
+    }
+    S.queueIdx=(S.queueIdx+1)%items.length;
+    preload(S.queueIdx);
+  }
+  function apply(){ coinEl.style.transform=`rotateY(${S.angle}deg)`; }
+  function checkEdgeCross(){
+    const mod=((S.angle%360)+360)%360;
+    const frontVisible=mod<90||mod>270;
+    if(frontVisible!==S.lastFrontVisible){
+      swapHiddenFace();
+      S.lastFrontVisible=frontVisible;
+      updateLabel();
+    }
+  }
+  function frame(now){
+    if(S.dead) return;
+    const dt=Math.min(now-S.lastFrame,50);
+    S.lastFrame=now;
+    if(!S.dragging && !document.hidden){
+      if(S.released){
+        if(!S.settled){
+          S.vAngle*=Math.pow(0.94,dt/16.67);
+          S.angle+=S.vAngle*dt;
+          checkEdgeCross();
+          if(Math.abs(S.vAngle)<0.005){
+            S.settled=true;
+            S.snapTarget=Math.round(S.angle/180)*180;
+          }
+        } else if(Math.abs(S.angle-S.snapTarget)>0.15){
+          const diff=S.snapTarget-S.angle;
+          S.angle+=diff*Math.min(1,dt/90);
+          checkEdgeCross();
+          if(Math.abs(S.angle-S.snapTarget)<0.15){ S.angle=S.snapTarget; checkEdgeCross(); }
+        } else {
+          if(now-S.releasedAt>=3000){
+            S.released=false; S.settled=false;
+            S.vAngle=(isRTL()?-1:1)*S.autoV;
+          }
+        }
+      } else {
+        S.vAngle=(isRTL()?-1:1)*S.autoV;
+        S.angle+=S.vAngle*dt;
+        checkEdgeCross();
+      }
+      apply();
+    }
+    S.raf=requestAnimationFrame(frame);
+  }
+  function crossfadeStep(){
+    if(S.dead) return;
+    // Advance to next product; mimic a "flip" by momentarily crossfading front image
+    const nextIdx=(S.frontIdx+1)%items.length;
+    frontImg.style.opacity='0';
+    setTimeout(()=>{
+      setImg(frontImg,items[nextIdx]);
+      S.frontIdx=nextIdx;
+      S.backIdx=(nextIdx+1)%items.length;
+      setImg(backImg,items[S.backIdx]);
+      updateLabel();
+      frontImg.style.opacity='';
+    },350);
+  }
+  // Pointer handling
+  const onDown=e=>{
+    if(e.pointerType==='mouse' && e.button!==0) return;
+    S.dragging=true; S.axis=null;
+    S.startX=e.clientX; S.startY=e.clientY;
+    S.lastX=e.clientX; S.lastT=performance.now();
+    S.dragDist=0; S.vAngle=0;
+    coinEl.classList.add('pressed');
+    try{ coinEl.setPointerCapture(e.pointerId); }catch(_){}
+  };
+  const onMove=e=>{
+    if(!S.dragging) return;
+    const dx=e.clientX-S.lastX;
+    const totalDx=e.clientX-S.startX;
+    const totalDy=e.clientY-S.startY;
+    if(S.axis===null){
+      if(Math.abs(totalDx)>6||Math.abs(totalDy)>6){
+        S.axis=Math.abs(totalDx)>=Math.abs(totalDy)?'x':'y';
+      }
+    }
+    if(S.axis==='y'){
+      S.dragging=false; coinEl.classList.remove('pressed');
+      try{ coinEl.releasePointerCapture(e.pointerId); }catch(_){}
+      return;
+    }
+    if(S.axis==='x'){
+      S.dragDist+=Math.abs(dx);
+      const sign=isRTL()?-1:1;
+      // 300px drag = 180deg rotation
+      S.angle+=sign*dx*(180/300);
+      checkEdgeCross();
+      apply();
+      const now=performance.now();
+      const dt=Math.max(now-S.lastT,1);
+      S.vAngle=sign*(180/300)*dx/dt;
+      S.lastX=e.clientX; S.lastT=now;
+      if(e.cancelable) e.preventDefault();
+    }
+  };
+  const onUp=e=>{
+    if(!S.dragging && S.axis!=='y'){ return; }
+    const wasDragging=S.dragging;
+    S.dragging=false;
+    coinEl.classList.remove('pressed');
+    try{ coinEl.releasePointerCapture(e.pointerId); }catch(_){}
+    if(wasDragging && S.axis==='x'){
+      S.releasedAt=performance.now();
+      S.released=true; S.settled=false;
+      S.vAngle=Math.max(-1.2,Math.min(1.2,S.vAngle));
+    }
+  };
+  const onClick=()=>{
+    if(S.dragDist>10) return;
+    const it=facingItem();
+    if(it) go('product',it.id);
+  };
+  const onKey=e=>{
+    if(document.activeElement!==coinEl) return;
+    if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onClick(); }
+  };
+  coinEl.addEventListener('pointerdown',onDown);
+  coinEl.addEventListener('pointermove',onMove);
+  coinEl.addEventListener('pointerup',onUp);
+  coinEl.addEventListener('pointercancel',onUp);
+  coinEl.addEventListener('click',onClick);
+  coinEl.addEventListener('keydown',onKey);
+  const onLangChange=()=>updateLabel();
+  window.addEventListener('zeinaLang',onLangChange);
+  apply();
+  preload(S.queueIdx);
+  if(reduced){
+    S.crossfadeTimer=setInterval(crossfadeStep,5000);
+  } else {
+    S.raf=requestAnimationFrame(frame);
+  }
+  S.destroy=()=>{
+    S.dead=true; cancelAnimationFrame(S.raf);
+    if(S.crossfadeTimer) clearInterval(S.crossfadeTimer);
+    coinEl.removeEventListener('pointerdown',onDown);
+    coinEl.removeEventListener('pointermove',onMove);
+    coinEl.removeEventListener('pointerup',onUp);
+    coinEl.removeEventListener('pointercancel',onUp);
+    coinEl.removeEventListener('click',onClick);
+    coinEl.removeEventListener('keydown',onKey);
+    window.removeEventListener('zeinaLang',onLangChange);
+  };
+  heroCoin=S;
+}
 
 /* ── Splash intro (once per session, swipe-up dismiss) ── */
 const SPLASH_TXT={en:{hint:'Swipe up',enter:'Enter'},ar:{hint:'اسحب للأعلى',enter:'ادخل'}};
