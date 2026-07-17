@@ -272,6 +272,30 @@ td{padding:11px 10px;border-bottom:1px solid var(--blush);vertical-align:middle}
 .warn-banner{background:#FEF3C7;border:1px solid #FCD34D;color:#92400E;border-radius:12px;padding:12px 16px;font-size:.85rem;margin-bottom:20px}
 
 .hiddenview{display:none!important}
+
+/* ── Lightbox ── */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:100;display:none;align-items:center;justify-content:center;overscroll-behavior:contain;-webkit-user-select:none;user-select:none;transition:background .22s ease}
+.lightbox.open{display:flex}
+.lb-stage{position:relative;width:100%;height:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:zoom-in}
+.lb-stage.zoomed{cursor:grab}
+.lb-stage.grabbing{cursor:grabbing}
+.lb-img{max-width:100%;max-height:100%;object-fit:contain;transform-origin:50% 50%;will-change:transform;-webkit-user-drag:none;user-drag:none;pointer-events:none}
+.lb-img.snap{transition:transform .28s cubic-bezier(.22,.61,.36,1)}
+.lb-close{position:absolute;top:14px;inset-inline-end:14px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);border:none;color:#fff;font-size:1.7rem;line-height:1;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center;transition:.2s;font-family:inherit;padding:0 0 3px}
+.lb-close:hover{background:rgba(255,255,255,.28)}
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);border:none;color:#fff;font-size:1.4rem;cursor:pointer;z-index:2;display:none;align-items:center;justify-content:center;transition:.2s}
+.lb-nav:hover{background:rgba(255,255,255,.28)}
+.lb-nav.prev{inset-inline-start:14px}
+.lb-nav.next{inset-inline-end:14px}
+.lightbox.has-many .lb-nav{display:flex}
+@media(hover:none){.lb-nav{display:none!important}}
+.lb-counter{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:#fff;background:rgba(0,0,0,.4);padding:5px 14px;border-radius:999px;font-size:.86rem;z-index:2;pointer-events:none;letter-spacing:.02em}
+.lb-dots{position:absolute;bottom:56px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:2;pointer-events:none}
+.lb-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.4);transition:.2s}
+.lb-dot.on{background:#fff;transform:scale(1.25)}
+.lightbox.single .lb-counter,.lightbox.single .lb-dots{display:none}
+.pd-visual{cursor:default}
+.pd-visual:has(img){cursor:zoom-in}
 .wa-float{position:fixed;bottom:24px;inset-inline-end:24px;z-index:60;width:56px;height:56px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.25);transition:.25s}
 .wa-float:hover{transform:scale(1.08)}
 .wa-float svg{width:28px;height:28px;fill:#fff}
@@ -421,6 +445,15 @@ td{padding:11px 10px;border-bottom:1px solid var(--blush);vertical-align:middle}
     <button class="btn btn-primary" style="width:100%" onclick="go('checkout')" data-t="checkoutBtn"></button>
   </div>
 </aside>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true">
+  <button class="lb-close" id="lbClose" aria-label="Close" type="button">×</button>
+  <button class="lb-nav prev" id="lbPrev" aria-label="Previous" type="button">‹</button>
+  <button class="lb-nav next" id="lbNext" aria-label="Next" type="button">›</button>
+  <div class="lb-stage" id="lbStage"><img class="lb-img" id="lbImg" alt=""></div>
+  <div class="lb-dots" id="lbDots"></div>
+  <div class="lb-counter" id="lbCounter" dir="ltr"></div>
+</div>
 
 <a class="wa-float" id="waFloat" target="_blank" rel="noopener" aria-label="WhatsApp">
   <svg viewBox="0 0 32 32"><path d="M16 3C9.4 3 4 8.3 4 14.9c0 2.6.9 5 2.3 7L4 29l7.3-2.3c1.9 1 4 1.6 6.2 1.6 6.6 0 12-5.3 12-11.9S22.6 3 16 3zm5.9 16.9c-.3.8-1.5 1.5-2.4 1.7-.6.1-1.4.2-4.2-.9-3.5-1.5-5.8-5-6-5.3-.2-.2-1.4-1.9-1.4-3.6s.9-2.6 1.2-2.9c.3-.3.7-.4 1-.4h.7c.2 0 .5-.1.8.6.3.8 1 2.6 1.1 2.8.1.2.2.4 0 .7-.1.3-.2.4-.4.7l-.6.7c-.2.2-.4.4-.2.8.2.4 1 1.7 2.2 2.7 1.5 1.3 2.8 1.8 3.2 2 .4.2.6.1.9-.1.2-.3 1-1.2 1.3-1.6.3-.4.5-.3.9-.2.4.1 2.4 1.1 2.8 1.3.4.2.7.3.8.5.1.1.1.9-.2 1.5z"/></svg>
@@ -602,6 +635,7 @@ const imgSrc=f=>f?(f.startsWith('http')||f.startsWith('/')||f.startsWith(IMG_BAS
 /* ── State ── */
 let DB=[], ORDERS=[], cart=store.get('zeina_cart')||{};
 let LANG='en', CUR='USD', FILTER='all', adminTab='dash', editingId=null, pickedIcon='mug', VIEW='home', SESSION=null;
+let PD_CURRENT=null, PD_VARIANT_IX=0;
 const t=k=>T[LANG][k];
 const byId=id=>DB.find(p=>p.id==id);
 const pname=p=>LANG==='en'?p.en:(p.ar||p.en);
@@ -938,6 +972,7 @@ function renderHome(){renderStatic();renderBest();renderCats();renderChips();ren
 function renderProductPage(id){
   const p=byId(id);
   if(!p){go('home');return}
+  PD_CURRENT=p; PD_VARIANT_IX=0;
   const vis=visibleDB();
   const similar=vis.filter(x=>x.c===p.c&&x.id!==p.id).slice(0,4);
   const alsoCats=alsoMap[p.c]||[];
@@ -955,7 +990,7 @@ function renderProductPage(id){
   document.getElementById('pdContent').innerHTML=`
     <div class="crumb"><a onclick="go('home')">${t('backHome')}</a> / <a onclick="FILTER='${p.c}';go('home','catalog');renderChips();renderProducts()">${cname(p.c)}</a> / ${esc(pname(p))}</div>
     <div class="pd-grid" data-primary-id="${p.id}">
-      <div class="pd-visual ${p.g}" id="pdVisual">
+      <div class="pd-visual ${p.g}" id="pdVisual" onclick="pdOpenLightbox()">
         ${p.best?`<span class="tag-best" style="top:16px">${p.top?t('top'):t('best')}</span>`:''}
         <div class="pd-img-wrap">${initialImg?`<img id="pdImg" src="${esc(initialImg)}" alt="${esc(p.en)}" loading="eager">`:(icons[p.i]||icons.mug)}</div>
       </div>
@@ -986,6 +1021,7 @@ function pdCtaHtml(target){
 function selectVariant(primaryId,ix){
   const p=byId(primaryId); if(!p||!p.variants) return;
   const v=p.variants[ix]; if(!v) return;
+  PD_VARIANT_IX=ix;
   document.querySelectorAll('.v-pill').forEach((el,i)=>{el.classList.toggle('on',i===ix);el.setAttribute('aria-checked',i===ix?'true':'false')});
   document.getElementById('pdPrice').innerHTML=fmtPrice(v.p);
   document.getElementById('pdRow').innerHTML=pdCtaHtml(v);
@@ -1113,6 +1149,325 @@ function refresh(){
 const navEl=document.getElementById('navLinks');
 document.getElementById('burger').addEventListener('click',()=>navEl.classList.toggle('open'));
 navEl.addEventListener('click',()=>navEl.classList.remove('open'));
+
+/* ── Lightbox: fullscreen viewer with pinch/wheel zoom, pan, gallery swipe ── */
+function pdOpenLightbox(){
+  const p=PD_CURRENT; if(!p) return;
+  let imgs=[];
+  if(p.isVariantPrimary && p.variants && p.variants.length){
+    const v=p.variants[PD_VARIANT_IX]||p.variants[0];
+    imgs=(v.images&&v.images.length?v.images:p.images).slice();
+  } else {
+    imgs=(p.images||[]).slice();
+  }
+  if(!imgs.length) return; // no image = nothing to open
+  openLightbox(imgs,0);
+}
+const LB={
+  imgs:[], idx:0, scale:1, tx:0, ty:0,
+  fitW:0, fitH:0, natW:0, natH:0, stageW:0, stageH:0,
+  pointers:new Map(),
+  startX:0, startY:0, startTx:0, startTy:0, startScale:1, startDist:0, startCx:0, startCy:0,
+  mode:null,        // 'swipe' | 'pan' | 'pinch' | null
+  swipeDx:0, swipeDy:0,
+  lastTap:0, lastTapX:0, lastTapY:0,
+  historyPushed:false, popHandler:null, keyHandler:null,
+  el:{}, bound:false, transitioning:false
+};
+function lbEls(){
+  if(LB.el.root) return;
+  LB.el.root=document.getElementById('lightbox');
+  LB.el.stage=document.getElementById('lbStage');
+  LB.el.img=document.getElementById('lbImg');
+  LB.el.close=document.getElementById('lbClose');
+  LB.el.prev=document.getElementById('lbPrev');
+  LB.el.next=document.getElementById('lbNext');
+  LB.el.counter=document.getElementById('lbCounter');
+  LB.el.dots=document.getElementById('lbDots');
+}
+function openLightbox(imgs, idx){
+  lbEls();
+  LB.imgs=imgs; LB.idx=Math.max(0,Math.min(idx|0,imgs.length-1));
+  LB.scale=1; LB.tx=0; LB.ty=0;
+  LB.el.root.classList.add('open');
+  LB.el.root.classList.toggle('has-many',imgs.length>1);
+  LB.el.root.classList.toggle('single',imgs.length<=1);
+  LB.el.root.setAttribute('aria-hidden','false');
+  document.body.style.overflow='hidden';
+  document.documentElement.style.overflow='hidden';
+  loadLbImage(LB.idx,false);
+  if(!LB.historyPushed){
+    try{ history.pushState({lb:true},''); LB.historyPushed=true; }catch(_){}
+  }
+  bindLb();
+  preloadNeighbors();
+}
+function closeLightbox(fromPop){
+  if(!LB.el.root||!LB.el.root.classList.contains('open')) return;
+  LB.el.root.classList.remove('open');
+  LB.el.root.setAttribute('aria-hidden','true');
+  LB.el.root.style.background='';
+  document.body.style.overflow='';
+  document.documentElement.style.overflow='';
+  unbindLb();
+  LB.pointers.clear(); LB.mode=null;
+  LB.scale=1; LB.tx=0; LB.ty=0; applyLb(false);
+  if(LB.historyPushed && !fromPop){
+    LB.historyPushed=false;
+    try{ history.back(); }catch(_){}
+  } else { LB.historyPushed=false; }
+}
+function loadLbImage(i,slideDir){
+  const n=LB.imgs.length;
+  LB.idx=((i%n)+n)%n;
+  const src=LB.imgs[LB.idx];
+  const img=LB.el.img;
+  const finalize=()=>{
+    img.onload=()=>{
+      LB.natW=img.naturalWidth||1; LB.natH=img.naturalHeight||1;
+      computeLbFit();
+      LB.scale=1; LB.tx=0; LB.ty=0; LB.el.stage.classList.remove('zoomed');
+      if(slideDir){
+        img.classList.remove('snap');
+        img.style.transform=`translate3d(${-slideDir*LB.stageW}px,0,0) scale(1)`;
+        void img.offsetWidth;
+        img.classList.add('snap');
+        img.style.transform='translate3d(0,0,0) scale(1)';
+        setTimeout(()=>img.classList.remove('snap'),300);
+      } else {
+        applyLb(false);
+      }
+    };
+    img.src=src;
+  };
+  if(slideDir){
+    img.classList.add('snap');
+    img.style.transform=`translate3d(${slideDir*LB.stageW}px,0,0) scale(1)`;
+    setTimeout(finalize,240);
+  } else {
+    finalize();
+  }
+  updateLbChrome();
+}
+function computeLbFit(){
+  const r=LB.el.stage.getBoundingClientRect();
+  LB.stageW=r.width; LB.stageH=r.height;
+  const sx=LB.stageW/LB.natW, sy=LB.stageH/LB.natH;
+  const s=Math.min(sx,sy,1);
+  LB.fitW=LB.natW*s; LB.fitH=LB.natH*s;
+}
+function applyLb(smooth){
+  const el=LB.el.img;
+  if(smooth) el.classList.add('snap'); else el.classList.remove('snap');
+  el.style.transform=`translate3d(${LB.tx.toFixed(2)}px,${LB.ty.toFixed(2)}px,0) scale(${LB.scale.toFixed(4)})`;
+  if(smooth) setTimeout(()=>el.classList.remove('snap'),300);
+}
+function clampPan(){
+  const w=LB.fitW*LB.scale, h=LB.fitH*LB.scale;
+  const maxX=Math.max(0,(w-LB.stageW)/2);
+  const maxY=Math.max(0,(h-LB.stageH)/2);
+  LB.tx=Math.max(-maxX,Math.min(maxX,LB.tx));
+  LB.ty=Math.max(-maxY,Math.min(maxY,LB.ty));
+}
+function setLbScale(newScale,anchorX,anchorY,smooth){
+  newScale=Math.max(1,Math.min(4,newScale));
+  const cx=LB.stageW/2, cy=LB.stageH/2;
+  const f=newScale/LB.scale;
+  LB.tx=(anchorX-cx)*(1-f)+LB.tx*f;
+  LB.ty=(anchorY-cy)*(1-f)+LB.ty*f;
+  LB.scale=newScale;
+  clampPan();
+  LB.el.stage.classList.toggle('zoomed',LB.scale>1.02);
+  applyLb(!!smooth);
+}
+function isRTL(){ return document.documentElement.dir==='rtl'; }
+function updateLbChrome(){
+  if(!LB.el.counter) return;
+  const n=LB.imgs.length, i=LB.idx+1;
+  LB.el.counter.textContent=`${i} / ${n}`;
+  if(LB.el.dots){
+    LB.el.dots.innerHTML='';
+    if(n>1 && n<=8){
+      for(let k=0;k<n;k++){
+        const d=document.createElement('span');
+        d.className='lb-dot'+(k===LB.idx?' on':'');
+        LB.el.dots.appendChild(d);
+      }
+    }
+  }
+}
+function preloadNeighbors(){
+  const n=LB.imgs.length; if(n<=1) return;
+  const next=LB.imgs[(LB.idx+1)%n];
+  const prev=LB.imgs[(LB.idx-1+n)%n];
+  [next,prev].forEach(src=>{ const im=new Image(); im.src=src; });
+}
+function lbGoto(delta,animate){
+  if(LB.imgs.length<=1) return;
+  // slide direction of outgoing image: LTR next slides left (-1), prev slides right (+1); RTL mirrored
+  const dir = animate ? ((isRTL()?1:-1) * Math.sign(delta)) : 0;
+  loadLbImage(LB.idx+delta, dir);
+  preloadNeighbors();
+}
+function lbPointerDown(e){
+  if(e.target===LB.el.close||e.target===LB.el.prev||e.target===LB.el.next) return;
+  LB.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  try{ LB.el.stage.setPointerCapture(e.pointerId); }catch(_){}
+  if(LB.pointers.size===2){
+    LB.mode='pinch';
+    const [a,b]=[...LB.pointers.values()];
+    LB.startDist=Math.hypot(a.x-b.x,a.y-b.y)||1;
+    LB.startCx=(a.x+b.x)/2; LB.startCy=(a.y+b.y)/2;
+    LB.startScale=LB.scale;
+    LB.startTx=LB.tx; LB.startTy=LB.ty;
+  } else if(LB.pointers.size===1){
+    LB.startX=e.clientX; LB.startY=e.clientY;
+    LB.startTx=LB.tx; LB.startTy=LB.ty;
+    LB.swipeDx=0; LB.swipeDy=0;
+    LB.mode=LB.scale>1.02?'pan':null;   // null means "not decided yet"
+  }
+}
+function lbPointerMove(e){
+  const p=LB.pointers.get(e.pointerId); if(!p) return;
+  p.x=e.clientX; p.y=e.clientY;
+  if(LB.pointers.size===2 && LB.mode==='pinch'){
+    const [a,b]=[...LB.pointers.values()];
+    const dist=Math.hypot(a.x-b.x,a.y-b.y)||1;
+    const cx=(a.x+b.x)/2, cy=(a.y+b.y)/2;
+    const ratio=dist/LB.startDist;
+    const newScale=Math.max(1,Math.min(4,LB.startScale*ratio));
+    const f=newScale/LB.startScale;
+    // Zoom so that the pixel at startCx,startCy moves with the current centroid cx,cy
+    LB.tx = cx - LB.stageW/2 - (LB.startCx - LB.stageW/2 - LB.startTx)*f;
+    LB.ty = cy - LB.stageH/2 - (LB.startCy - LB.stageH/2 - LB.startTy)*f;
+    LB.scale=newScale;
+    clampPan();
+    LB.el.stage.classList.toggle('zoomed',LB.scale>1.02);
+    applyLb(false);
+    return;
+  }
+  if(LB.pointers.size!==1) return;
+  const dx=e.clientX-LB.startX, dy=e.clientY-LB.startY;
+  if(LB.mode==='pan' || LB.scale>1.02){
+    LB.mode='pan';
+    LB.tx=LB.startTx+dx; LB.ty=LB.startTy+dy;
+    clampPan(); applyLb(false);
+    return;
+  }
+  // scale ~ 1: decide swipe axis after 8px
+  if(LB.mode===null){
+    if(Math.abs(dx)>8||Math.abs(dy)>8){
+      LB.mode=Math.abs(dx)>=Math.abs(dy)?'swipe':'vswipe';
+    } else return;
+  }
+  if(LB.mode==='swipe'){
+    LB.swipeDx=dx;
+    LB.el.img.style.transform=`translate3d(${dx}px,0,0) scale(1)`;
+    return;
+  }
+  if(LB.mode==='vswipe'){
+    LB.swipeDy=dy;
+    const opacity=Math.max(.35,1-Math.abs(dy)/500);
+    LB.el.root.style.background=`rgba(0,0,0,${.92*opacity})`;
+    LB.el.img.style.transform=`translate3d(0,${dy}px,0) scale(${Math.max(.7,1-Math.abs(dy)/1200)})`;
+  }
+}
+function lbPointerUp(e){
+  const p=LB.pointers.get(e.pointerId); if(!p){LB.pointers.delete(e.pointerId);return}
+  LB.pointers.delete(e.pointerId);
+  try{ LB.el.stage.releasePointerCapture(e.pointerId); }catch(_){}
+  if(LB.mode==='pinch' && LB.pointers.size<2){
+    if(LB.scale<1.05){
+      LB.scale=1; LB.tx=0; LB.ty=0;
+      LB.el.stage.classList.remove('zoomed');
+      applyLb(true);
+    }
+    LB.mode=LB.scale>1.02?'pan':null;
+    // If one finger still down, treat it as a new pan/swipe origin
+    if(LB.pointers.size===1){
+      const [pp]=[...LB.pointers.values()];
+      LB.startX=pp.x; LB.startY=pp.y; LB.startTx=LB.tx; LB.startTy=LB.ty;
+    }
+    return;
+  }
+  if(LB.mode==='swipe'){
+    const threshold=Math.max(60,LB.stageW*0.18);
+    const rtl=isRTL();
+    if(Math.abs(LB.swipeDx)>threshold){
+      const forward = rtl ? LB.swipeDx>0 : LB.swipeDx<0;
+      lbGoto(forward?1:-1,true);
+    } else {
+      LB.el.img.classList.add('snap');
+      LB.el.img.style.transform='translate3d(0,0,0) scale(1)';
+      setTimeout(()=>LB.el.img.classList.remove('snap'),280);
+    }
+  } else if(LB.mode==='vswipe'){
+    if(Math.abs(LB.swipeDy)>100){
+      closeLightbox(false);
+      return;
+    }
+    LB.el.root.style.background='';
+    LB.el.img.classList.add('snap');
+    LB.el.img.style.transform='translate3d(0,0,0) scale(1)';
+    setTimeout(()=>LB.el.img.classList.remove('snap'),280);
+  } else if(LB.mode===null){
+    // Tap — check for double-tap
+    const now=performance.now();
+    const dt=now-LB.lastTap;
+    const near=Math.hypot(e.clientX-LB.lastTapX,e.clientY-LB.lastTapY)<40;
+    if(dt<320 && near){
+      if(LB.scale<1.1) setLbScale(2.5,e.clientX,e.clientY,true);
+      else { LB.scale=1; LB.tx=0; LB.ty=0; LB.el.stage.classList.remove('zoomed'); applyLb(true); }
+      LB.lastTap=0;
+    } else {
+      LB.lastTap=now; LB.lastTapX=e.clientX; LB.lastTapY=e.clientY;
+    }
+  }
+  LB.mode=LB.scale>1.02?'pan':null;
+}
+function lbWheel(e){
+  e.preventDefault();
+  const factor=Math.exp(-e.deltaY*0.0015);
+  const rect=LB.el.stage.getBoundingClientRect();
+  setLbScale(LB.scale*factor,e.clientX-rect.left,e.clientY-rect.top,false);
+}
+function lbKey(e){
+  if(e.key==='Escape'){ closeLightbox(false); return; }
+  if(LB.imgs.length<=1) return;
+  if(e.key==='ArrowLeft')  lbGoto(isRTL()?1:-1,true);
+  if(e.key==='ArrowRight') lbGoto(isRTL()?-1:1,true);
+}
+function lbPopState(){ closeLightbox(true); }
+function lbOverlayClick(e){
+  if(e.target===LB.el.root||e.target===LB.el.stage){ closeLightbox(false); }
+}
+function bindLb(){
+  if(LB.bound) return; LB.bound=true;
+  LB.el.stage.addEventListener('pointerdown',lbPointerDown);
+  LB.el.stage.addEventListener('pointermove',lbPointerMove);
+  LB.el.stage.addEventListener('pointerup',lbPointerUp);
+  LB.el.stage.addEventListener('pointercancel',lbPointerUp);
+  LB.el.stage.addEventListener('wheel',lbWheel,{passive:false});
+  LB.el.close.addEventListener('click',()=>closeLightbox(false));
+  LB.el.root.addEventListener('click',lbOverlayClick);
+  LB.el.prev.addEventListener('click',()=>lbGoto(isRTL()?1:-1,true));
+  LB.el.next.addEventListener('click',()=>lbGoto(isRTL()?-1:1,true));
+  LB.keyHandler=lbKey; window.addEventListener('keydown',LB.keyHandler);
+  LB.popHandler=lbPopState; window.addEventListener('popstate',LB.popHandler);
+  window.addEventListener('resize',lbOnResize);
+}
+function unbindLb(){
+  if(!LB.bound) return; LB.bound=false;
+  LB.el.stage.removeEventListener('pointerdown',lbPointerDown);
+  LB.el.stage.removeEventListener('pointermove',lbPointerMove);
+  LB.el.stage.removeEventListener('pointerup',lbPointerUp);
+  LB.el.stage.removeEventListener('pointercancel',lbPointerUp);
+  LB.el.stage.removeEventListener('wheel',lbWheel,{passive:false});
+  window.removeEventListener('keydown',LB.keyHandler);
+  window.removeEventListener('popstate',LB.popHandler);
+  window.removeEventListener('resize',lbOnResize);
+}
+function lbOnResize(){ computeLbFit(); clampPan(); applyLb(false); }
 
 /* ── Boot ── */
 (async function(){
