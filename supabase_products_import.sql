@@ -12,7 +12,12 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS images    jsonb NOT NULL DEFAULT '
 ALTER TABLE products ALTER COLUMN price DROP NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS products_sku_uidx ON products (sku);
 
--- 2. Upsert 137 products (matched by SKU)
+-- 2. Remove pre-import seed rows. Any row without a SKU is either the
+--    original demo seed or predates this migration. Rows added later
+--    via the admin panel always carry a SKU and are preserved.
+DELETE FROM products WHERE sku IS NULL;
+
+-- 3. Upsert 137 products (matched by SKU)
 INSERT INTO products (id, sku, barcode, en, ar, category, price, cost_usd, icon, gradient, images, best, top_seller) VALUES
 (1, 'MUGSDM-1753', '7521890161082', 'Porcelain mug, hearts pattern', 'ماغ برسلين نقشات قلوب SDM020-1753', 'drink', NULL, 12, 'mug', 'g2', '[]'::jsonb, FALSE, FALSE),
 (2, 'MUGSY9057', '6821689390572', 'Porcelain mug, colored ribbed', 'ماغ برسلين ملون مضلع ناعم SY9057', 'drink', NULL, 12, 'mug', 'g3', '["MUGSY9057.jpg"]'::jsonb, FALSE, FALSE),
@@ -162,6 +167,6 @@ ON CONFLICT (sku) DO UPDATE SET
   images    = EXCLUDED.images;
 -- Note: price is intentionally NOT overwritten so admin edits are preserved.
 
--- 3. Reset the id sequence so new products added via admin get id 200+.
+-- 4. Reset the id sequence so new products added via admin get id 200+.
 SELECT setval(pg_get_serial_sequence('products','id'), 200, false);
 
