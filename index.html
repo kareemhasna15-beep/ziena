@@ -92,11 +92,11 @@ html[dir="rtl"] .hero h1 .script{font-family:'Tajawal',sans-serif;font-size:1em;
 
 /* ── Marquee ── */
 .bestsellers{background:linear-gradient(180deg,#fff 0%,var(--blush) 100%);padding-bottom:86px}
-.marquee{overflow:hidden;position:relative;padding:12px 0;direction:ltr;-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
-.track{display:flex;gap:24px;width:max-content;animation:scroll 42s linear infinite}
-.marquee:hover .track{animation-play-state:paused}
-@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-@media(prefers-reduced-motion:reduce){.track{animation:none}.marquee{overflow-x:auto;mask-image:none;-webkit-mask-image:none}.hero-plate{animation:none}}
+.marquee{overflow:hidden;position:relative;padding:12px 0;direction:ltr;-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:grab}
+.marquee.dragging{cursor:grabbing}
+.marquee.dragging .bs-card{transform:none!important;transition:none}
+.track{display:flex;gap:24px;width:max-content;will-change:transform}
+@media(prefers-reduced-motion:reduce){.marquee{overflow-x:auto;mask-image:none;-webkit-mask-image:none;cursor:auto}.hero-plate{animation:none}}
 .bs-card{width:250px;flex-shrink:0;background:#fff;border-radius:var(--radius);border:1px solid var(--blush-2);box-shadow:var(--shadow);overflow:hidden;transition:.3s;cursor:pointer;min-width:0}
 .bs-card:hover{transform:translateY(-6px);border-color:var(--gold-soft)}
 .bs-art{height:150px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
@@ -367,7 +367,7 @@ td{padding:11px 10px;border-bottom:1px solid var(--blush);vertical-align:middle}
 
   <section class="bestsellers" id="bestsellers">
     <div class="sec-head"><h2 id="bsTitle"></h2><p data-t="bsSub"></p><div class="divider">✦</div></div>
-    <div class="marquee"><div class="track" id="bsTrack"></div></div>
+    <div class="marquee" id="bsMarquee"><div class="track" id="bsTrack"></div></div>
   </section>
 
   <section class="cats" id="categories">
@@ -761,9 +761,11 @@ function renderStatic(){
   document.getElementById('waFloat').href=wa;
 }
 function renderBest(){
-  const best=visibleDB().filter(p=>p.best).sort((a,b)=>(b.top?1:0)-(a.top?1:0));
+  const vis=visibleDB();
+  let best=vis.filter(p=>p.best).sort((a,b)=>(b.top?1:0)-(a.top?1:0));
+  if(best.length<4)best=vis.filter(p=>p.images.length).slice(0,12);
   const card=p=>`
-    <div class="bs-card" onclick="go('product',${p.id})">
+    <div class="bs-card" data-pid="${p.id}">
       <div class="bs-art ${p.g}">
         <span class="bs-rank" ${p.top?'':'style="background:var(--gold)"'}>${p.top?t('top'):t('best')}</span>
         ${artInner(p)}
@@ -775,7 +777,140 @@ function renderBest(){
       </div>
     </div>`;
   const html=best.map(card).join('');
-  document.getElementById('bsTrack').innerHTML=html+html;
+  const track=document.getElementById('bsTrack');
+  track.innerHTML=html+html;
+  setupBestCarousel();
+}
+
+/* ── Best-sellers carousel: rAF loop, pointer drag, momentum, auto-resume ── */
+let bsCarousel=null;
+function setupBestCarousel(){
+  const marquee=document.getElementById('bsMarquee');
+  const track=document.getElementById('bsTrack');
+  if(!marquee||!track||!track.children.length)return;
+  const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(bsCarousel)bsCarousel.destroy();
+  const S={
+    x:0, vx:0, autoVx:-0.15, halfW:0,
+    dragging:false, startX:0, startY:0, lastX:0, lastT:0, dragDist:0,
+    lastFrame:performance.now(), releasedAt:0, released:false,
+    dead:false, raf:0, axisLocked:null
+  };
+  const measure=()=>{
+    const kids=track.children;
+    const half=Math.floor(kids.length/2);
+    if(half<1){S.halfW=0;return}
+    S.halfW=kids[half].offsetLeft;
+    if(S.halfW>0)S.autoVx=-S.halfW/42000;
+  };
+  const wrap=()=>{
+    if(S.halfW<=0)return;
+    while(S.x<=-S.halfW)S.x+=S.halfW;
+    while(S.x>0)S.x-=S.halfW;
+  };
+  const apply=()=>{ track.style.transform=`translate3d(${S.x.toFixed(2)}px,0,0)` };
+  const frame=(now)=>{
+    if(S.dead)return;
+    const dt=Math.min(now-S.lastFrame,50);
+    S.lastFrame=now;
+    if(!S.dragging){
+      if(S.released){
+        const idle=now-S.releasedAt;
+        if(idle<3000){
+          S.vx*=Math.pow(0.94,dt/16.67);
+          if(Math.abs(S.vx)<0.005)S.vx=0;
+        }else{
+          const blend=Math.min(1,dt/500);
+          S.vx=S.vx+(S.autoVx-S.vx)*blend;
+          if(Math.abs(S.vx-S.autoVx)<0.005){S.vx=S.autoVx;S.released=false}
+        }
+      }else{
+        S.vx=S.autoVx;
+      }
+      S.x+=S.vx*dt;
+      wrap();apply();
+    }
+    S.raf=requestAnimationFrame(frame);
+  };
+  const onDown=e=>{
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    S.dragging=true;S.axisLocked=null;
+    S.startX=e.clientX;S.startY=e.clientY;
+    S.lastX=e.clientX;S.lastT=performance.now();
+    S.dragDist=0;S.vx=0;
+    marquee.classList.add('dragging');
+    try{marquee.setPointerCapture(e.pointerId)}catch(_){}
+  };
+  const onMove=e=>{
+    if(!S.dragging)return;
+    const dx=e.clientX-S.lastX;
+    const totalDx=e.clientX-S.startX;
+    const totalDy=e.clientY-S.startY;
+    if(S.axisLocked===null){
+      if(Math.abs(totalDx)>6||Math.abs(totalDy)>6){
+        S.axisLocked=Math.abs(totalDx)>=Math.abs(totalDy)?'x':'y';
+      }
+    }
+    if(S.axisLocked==='y'){
+      S.dragging=false;marquee.classList.remove('dragging');
+      try{marquee.releasePointerCapture(e.pointerId)}catch(_){}
+      return;
+    }
+    if(S.axisLocked==='x'){
+      S.dragDist+=Math.abs(dx);
+      S.x+=dx;wrap();apply();
+      const now=performance.now();
+      const dt=Math.max(now-S.lastT,1);
+      S.vx=dx/dt;
+      S.lastX=e.clientX;S.lastT=now;
+      if(e.cancelable)e.preventDefault();
+    }
+  };
+  const onUp=e=>{
+    if(!S.dragging&&S.axisLocked!=='y')return;
+    const wasDragging=S.dragging;
+    S.dragging=false;
+    marquee.classList.remove('dragging');
+    try{marquee.releasePointerCapture(e.pointerId)}catch(_){}
+    if(wasDragging){
+      S.releasedAt=performance.now();
+      S.released=true;
+      S.vx=Math.max(-3,Math.min(3,S.vx));
+    }
+  };
+  const onClickCapture=e=>{
+    if(S.dragDist>10){
+      e.stopPropagation();e.stopImmediatePropagation();e.preventDefault();
+    }
+    S.dragDist=0;
+  };
+  const onCardClick=e=>{
+    const c=e.target.closest('.bs-card');
+    if(!c)return;
+    const pid=+c.dataset.pid;
+    if(pid)go('product',pid);
+  };
+  marquee.addEventListener('pointerdown',onDown);
+  marquee.addEventListener('pointermove',onMove);
+  marquee.addEventListener('pointerup',onUp);
+  marquee.addEventListener('pointercancel',onUp);
+  marquee.addEventListener('click',onClickCapture,true);
+  marquee.addEventListener('click',onCardClick);
+  const onResize=()=>{const prev=S.halfW;measure();if(prev>0&&S.halfW>0)S.x=S.x*(S.halfW/prev);wrap();apply()};
+  window.addEventListener('resize',onResize);
+  measure();apply();
+  if(!reduced){S.raf=requestAnimationFrame(frame)}
+  S.destroy=()=>{
+    S.dead=true;cancelAnimationFrame(S.raf);
+    marquee.removeEventListener('pointerdown',onDown);
+    marquee.removeEventListener('pointermove',onMove);
+    marquee.removeEventListener('pointerup',onUp);
+    marquee.removeEventListener('pointercancel',onUp);
+    marquee.removeEventListener('click',onClickCapture,true);
+    marquee.removeEventListener('click',onCardClick);
+    window.removeEventListener('resize',onResize);
+  };
+  bsCarousel=S;
 }
 function renderCats(){
   const vis=visibleDB();

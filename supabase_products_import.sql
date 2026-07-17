@@ -234,6 +234,24 @@ UPDATE products SET variant_group='tak-strainer', variant_label_en='3.5L', varia
 UPDATE products SET variant_group='glass-mug-dw', variant_label_en='9cm', variant_label_ar='9 سم', variant_order=1 WHERE sku='GTM250-9';
 UPDATE products SET variant_group='glass-mug-dw', variant_label_en='12cm', variant_label_ar='12 سم', variant_order=2 WHERE sku='GTM350-12';
 
--- 5. Reset the id sequence so new products added via admin get id 200+.
+-- 5. Initial best-sellers curation (admin can flip these anytime).
+--     Chosen for visual coverage: at least one from each visible category
+--     with a photo, so the front-page marquee never looks sparse.
+UPDATE products SET best=TRUE WHERE sku='YCS 776-4 / CS0012045';
+UPDATE products SET best=TRUE WHERE sku='027iwz';
+UPDATE products SET best=TRUE WHERE sku='B-25093HY';
+UPDATE products SET best=TRUE WHERE sku='YCS 776-12 / CS0012051';
+UPDATE products SET best=TRUE WHERE sku='5313G';
+UPDATE products SET best=TRUE WHERE sku='420-23KX';
+UPDATE products SET best=TRUE WHERE sku='tukomaz';
+UPDATE products SET best=TRUE WHERE sku='10442';
+UPDATE products SET best=TRUE WHERE sku='DH-03234';
+UPDATE products SET best=TRUE WHERE sku='YCS 721-1A / CS0011880';
+UPDATE products SET best=TRUE WHERE sku='ABC11839';
+UPDATE products SET best=TRUE WHERE sku='11969';
+UPDATE products SET top_seller=TRUE WHERE sku='ABC11839';
+UPDATE products SET top_seller=TRUE WHERE sku='5313G';
+
+-- 6. Reset the id sequence so new products added via admin get id 200+.
 SELECT setval(pg_get_serial_sequence('products','id'), 200, false);
 
