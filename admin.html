@@ -190,44 +190,12 @@ const productImages=p=>Array.isArray(p.images)?p.images:(p.image_url?[p.image_ur
 const cname=id=>{const c=categories.find(c=>c.id===id);return c?c.en:id};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
-/* demo data */
-let demoProducts=[
- {id:12,en:'Tulip Mug',ar:'ماغ شكل توليب',category:'drink',price:4,icon:'mug',best:true,image_url:''},
- {id:1,en:'Verona Grey Dinner Set — 28 pcs',ar:'طقم سفرة فيرونا',category:'dinner',price:122,icon:'plate',best:false,image_url:''},
- {id:30,en:'Tukomaz Tissue Box',ar:'علبة محارم توكوماز',category:'tissue',price:5,icon:'tissue',best:true,image_url:''},
-];
-let demoOrders=(function(){
-  /* generate ~30 days of sample orders so the analytics look real in demo */
-  const names=['Sara K.','Mohammad H.','Layla A.','Omar S.','Nour T.','Rima D.','Hadi M.','Maya F.'];
-  const pool=[
-    {name:'Tulip Mug',unit:4},{name:'Tukomaz Tissue Box',unit:5},{name:'Ecuador Mug',unit:4.5},
-    {name:'Verona Grey Dinner Set — 28 pcs',unit:122},{name:'Gold Round Charger Plate 38 cm',unit:2},
-    {name:'Victoria Gold Cup, Saucer & Spoon ×6',unit:13},{name:'LUXE Gold Tray',unit:33},
-    {name:'Slim Gold-Rim Glasses ×12',unit:10},{name:'Ceramic Twist Tissue Box',unit:13},
-    {name:'Decorative Books — Assorted',unit:3.5}];
-  const out=[];let id=1000;
-  for(let d=32;d>=0;d--){
-    const n=Math.random()<.35?0:Math.ceil(Math.random()*2);
-    for(let k=0;k<n;k++){
-      const items=[];const used=new Set();
-      const cnt=1+Math.floor(Math.random()*3);
-      for(let j=0;j<cnt;j++){
-        let pi=Math.floor(Math.random()*pool.length);
-        if(used.has(pi))continue;used.add(pi);
-        const it=pool[pi];items.push({name:it.name,qty:1+Math.floor(Math.random()*3),unit:it.unit});
-      }
-      if(!items.length)continue;
-      const total=+items.reduce((s,i)=>s+i.qty*i.unit,0).toFixed(2);
-      const dt=new Date(Date.now()-d*864e5-Math.random()*7e7);
-      out.push({id:++id,created_at:dt.toISOString(),name:names[Math.floor(Math.random()*names.length)],
-        phone:'+961 71 '+(100000+Math.floor(Math.random()*899999)),
-        address:['Beirut, Hamra','Tripoli, Mina','Saida','Jounieh','Zahle'][Math.floor(Math.random()*5)],
-        note:'',items,total,status:d<1?'new':(Math.random()<.88?'done':'cancel')});
-    }
-  }
-  return out.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-})();
-let demoSeq=2000;
+/* Demo scaffolding: empty. If the Supabase keys are ever removed the
+   admin degrades to empty tables — no invented customers, addresses or
+   analytics. Only real data from the database ever shows up. */
+let demoProducts = [];
+let demoOrders = [];
+let demoSeq = 1;
 
 /* state */
 let SESSION=null,TAB='dash',PRODUCTS=[],ORDERS=[],editingId=null,pickedIcon='mug';

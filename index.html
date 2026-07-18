@@ -136,9 +136,11 @@ html[dir="rtl"] .nav-links{letter-spacing:0;text-transform:none;font-size:.95rem
 .btn-add{background:var(--magenta);color:#fff;border:none;border-radius:999px;padding:9px 18px;font-size:.8rem;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.22s}
 .btn-add:hover{background:var(--magenta-deep)}
 .btn-add.added{background:var(--ok)}
-.btn-add.btn-ask{background:#25D366;color:#fff}
-.btn-add.btn-ask:hover{background:#128C7E}
-.price-ask{font-size:.86em;font-weight:600;color:var(--gold);letter-spacing:.02em}
+.btn-add.btn-inquire{background:linear-gradient(135deg,var(--gold) 0%,#B48734 100%);color:#fff;box-shadow:0 4px 14px rgba(194,154,75,.28)}
+.btn-add.btn-inquire:hover{background:linear-gradient(135deg,#B48734 0%,#8E6820 100%)}
+.btn-inquire-lg{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 28px;border-radius:999px;font-weight:600;letter-spacing:.04em;font-size:.9rem;background:linear-gradient(135deg,var(--gold) 0%,#B48734 100%);color:#fff;box-shadow:0 8px 24px rgba(194,154,75,.3);cursor:pointer;transition:.25s;border:none;font-family:inherit}
+.btn-inquire-lg:hover{background:linear-gradient(135deg,#B48734 0%,#8E6820 100%);transform:translateY(-2px)}
+.price-ask{font-size:.94em;font-weight:600;color:var(--gold);letter-spacing:.02em}
 section{padding:70px 0}
 .sec-head{text-align:center;max-width:620px;margin:0 auto 46px}
 .sec-head h2{font-size:clamp(1.9rem,3.6vw,2.7rem);color:var(--plum)}
@@ -704,59 +706,12 @@ const sb = (SUPABASE_URL && SUPABASE_ANON_KEY)
    so you can try the store, checkout and admin. Orders placed in demo
    mode are kept in memory only. Fill in the keys to go live. */
 const DEMO = !sb;
-const SEED = [
- {id:1,en:'Verona Grey Dinner Set — 28 pcs',ar:'طقم سفرة فيرونا رمادي ٢٨ قطعة',c:'dinner',i:'plate',g:'g3',p:122},
- {id:2,en:'Elegant Black Dinner Set — 26 pcs',ar:'طقم صحون أسود أنيق ٢٦ قطعة',c:'dinner',i:'plate',g:'g1',p:75},
- {id:3,en:'Gold Round Charger Plate 38 cm',ar:'سوبلا مدورة ذهبية ٣٨ سم',c:'dinner',i:'charger',g:'g2',p:2,best:true},
- {id:4,en:'PVC Charger Plates — Set of 6',ar:'سوبلا PVC طقم ٦',c:'dinner',i:'charger',g:'g4',p:12},
- {id:5,en:'Victoria Gold Cup, Saucer & Spoon ×6',ar:'كاسة مع صحن وملعقة فيكتوريا ذهبي ×٦',c:'coffee',i:'cup',g:'g2',p:13,best:true},
- {id:6,en:'Bavaria Cup, Saucer & Spoon ×12',ar:'كاسة مع صحن وملعقة بافاريا ×١٢',c:'coffee',i:'cup',g:'g1',p:39},
- {id:7,en:'Verona Greige Coffee Cups & Saucers',ar:'فناجين قهوة فيرونا',c:'coffee',i:'cup',g:'g3',p:24},
- {id:8,en:'Verona Greige Tea Cups & Saucers',ar:'كاسات شاي فيرونا',c:'coffee',i:'cup',g:'g3',p:31},
- {id:9,en:'Colored Coffee Cups & Saucers',ar:'فناجين قهوة ملونة',c:'coffee',i:'cup',g:'g5',p:24},
- {id:10,en:'Colored Tea Cups & Saucers ×6',ar:'شاي مع صحن ملون ×٦',c:'coffee',i:'cup',g:'g4',p:12},
- {id:11,en:'Floral Coffee Set',ar:'طقم قهوة مشكل فلوري',c:'coffee',i:'teapot',g:'g1',p:15},
- {id:12,en:'Tulip Mug',ar:'ماغ شكل توليب',c:'drink',i:'mug',g:'g1',p:4,best:true,top:true},
- {id:13,en:'Ecuador Mug',ar:'ماغ فدار اكوادور',c:'drink',i:'mug',g:'g4',p:4.5,best:true},
- {id:14,en:'Ribbed Rose Mughli Cup',ar:'كباية مغلي وردة مضلعة',c:'drink',i:'mug',g:'g5',p:8,best:true},
- {id:15,en:'Slim Gold-Rim Glasses ×12',ar:'كبايات رفيعة شفافة ذهبي ×١٢',c:'drink',i:'glass',g:'g2',p:10,best:true},
- {id:16,en:'Thermos 1 L — White & Gold',ar:'ترمس ١ لتر أبيض ذهبي',c:'drink',i:'thermos',g:'g2',p:15},
- {id:17,en:'Dosthoff Gloria Cutlery Collection',ar:'أدوات مائدة غلوريا',c:'cutlery',i:'cutlery',g:'g2',p:6.5},
- {id:18,en:'LEX Gold Cutlery — Large',ar:'ملاعق وشوك ذهبي كبير LEX ×٦',c:'cutlery',i:'cutlery',g:'g2',p:5},
- {id:19,en:'LEX Gold Cutlery — Medium & Small',ar:'ملاعق وشوك ذهبي وسط وصغير ×٦',c:'cutlery',i:'cutlery',g:'g1',p:4},
- {id:20,en:'Wooden Tray — Black Arabesque 35 cm',ar:'صينية خشب أرابيسك أسود ٣٥ سم',c:'serve',i:'tray',g:'g5',p:18},
- {id:21,en:'LUXE Gold Tray',ar:'صينية ذهبية LUXE',c:'serve',i:'tray',g:'g2',p:33},
- {id:22,en:'Cassia Gold Tray',ar:'صينية ذهبية كاسيا',c:'serve',i:'tray',g:'g2',p:33},
- {id:23,en:'Prestige Gold Tray',ar:'صينية ذهبية برستيج',c:'serve',i:'tray',g:'g2',p:33},
- {id:24,en:'Combi Gold Tray',ar:'صينية ذهبية كومبي',c:'serve',i:'tray',g:'g2',p:33},
- {id:25,en:'Metal Trays with Mirror Base',ar:'صواني معدن قاعدة مرايا',c:'serve',i:'tray',g:'g3',p:25},
- {id:26,en:'Gray Marble Cake Stand 30 cm',ar:'قاعدة كيك رخام رمادي ٣٠ سم',c:'serve',i:'cake',g:'g3',p:21},
- {id:27,en:'Glass Bowl with Base',ar:'وعاء زجاج مع قاعدة',c:'serve',i:'bowl',g:'g4',p:12},
- {id:28,en:'Glass Bowl — Wooden Base 19 cm',ar:'وعاء زجاج قاعدة خشب ١٩ سم',c:'serve',i:'bowl',g:'g5',p:17},
- {id:29,en:'Beige Marble Round Coasters',ar:'قواعد أكواب رخام بيج',c:'serve',i:'coaster',g:'g2',p:13},
- {id:30,en:'Tukomaz Tissue Box',ar:'علبة محارم توكوماز',c:'tissue',i:'tissue',g:'g1',p:5,best:true},
- {id:31,en:'Ceramic Twist Tissue Box',ar:'علبة محارم سيراميك تويست',c:'tissue',i:'tissue',g:'g4',p:13,best:true},
- {id:32,en:'Porcelain Tissue Box — Pearl',ar:'علبة محارم بورسلان لؤلؤة',c:'tissue',i:'tissue',g:'g3',p:18},
- {id:33,en:'Porcelain Tissue Box — Bag Shape',ar:'علبة محارم بورسلان شكل حقيبة',c:'tissue',i:'tissue',g:'g5',p:18},
- {id:34,en:'Gold Porcelain Tissue Box',ar:'علبة محارم بورسلان ذهبي',c:'tissue',i:'tissue',g:'g2',p:12},
- {id:35,en:'Marble Tissue Box — Slim',ar:'علبة محارم صخر رفيع',c:'tissue',i:'tissue',g:'g3',p:20},
- {id:36,en:'Marble Tissue Box — Ladies Finger',ar:'علبة محارم صخر ليديز فنغر',c:'tissue',i:'tissue',g:'g1',p:20},
- {id:37,en:'Tall Vase — Zaytouna',ar:'زيتونة فاز طويل',c:'decor',i:'vase',g:'g4',p:50},
- {id:38,en:'Pebbles Pottery Vases — 3 pcs',ar:'طقم فازات فخار حصى ٣ قطع',c:'decor',i:'vase',g:'g5',p:24},
- {id:39,en:'Gold Orchid Arrangement',ar:'أوركيدة مزيج ذهبي',c:'decor',i:'flower',g:'g1',p:40},
- {id:40,en:'Decorative Books — Assorted',ar:'كتب ديكور ملونة',c:'decor',i:'book',g:'g4',p:3.5,best:true},
- {id:41,en:'Nordic Table Lamp',ar:'مصباح طاولة نورديك',c:'decor',i:'lamp',g:'g3',p:24},
- {id:42,en:'Standing Mirror 160×50 — Gold/Black',ar:'مرآة أرضية ١٦٠×٥٠ ذهبي أسود',c:'decor',i:'mirror',g:'g2',p:40},
- {id:43,en:'Rectangular Basket 32 cm — Black',ar:'سلة مستطيلة ٣٢ سم أسود',c:'decor',i:'basket',g:'g5',p:7.5},
- {id:44,en:'Metal Basket — Wooden Handle',ar:'سلة معدن يد خشب',c:'decor',i:'basket',g:'g4',p:7},
- {id:45,en:'Gold Measuring Cups ×4',ar:'كاسات قياس ذهبية ×٤',c:'decor',i:'measuring',g:'g2',p:12},
- {id:46,en:'Round Ashtray — Rio Honey',ar:'منفضة مدورة ريو عسلي',c:'decor',i:'ashtray',g:'g5',p:4},
-];
-let demoOrders=[
- {id:1042,created_at:new Date(Date.now()-864e5).toISOString(),name:'Sara K.',phone:'+961 71 123 456',address:'Beirut, Hamra',note:'',items:[{pid:12,name:'Tulip Mug',qty:4,unit:4},{pid:30,name:'Tukomaz Tissue Box',qty:2,unit:5}],total:26,status:'done'},
- {id:1043,created_at:new Date(Date.now()-36e5).toISOString(),name:'Mohammad H.',phone:'+961 76 654 321',address:'Tripoli, Mina',note:'call before delivery',items:[{pid:1,name:'Verona Grey Dinner Set — 28 pcs',qty:1,unit:122}],total:122,status:'new'},
-];
-let demoIdSeq=2000;
+/* Preview scaffolding: empty by design. If the Supabase keys are ever removed
+   the site degrades to an empty catalog / empty order log rather than showing
+   made-up customers, prices or items. */
+const SEED = [];
+let demoOrders = [];
+let demoIdSeq = 1;
 
 /* ── Cart storage (per-device, safe fallback for previews) ── */
 const mem = {};
@@ -782,6 +737,7 @@ const T = {
   cartTitle:'Your Cart',total:'Total',checkoutBtn:'Checkout',emptyCart:'Your cart is empty.',remove:'Remove',
   similar:'Similar products',alsoBuy:'Customers also buy',backHome:'Home',contactPrice:'Contact for price',
   colSearchPh:'Search the collection…',noMatch:'No matching products.',
+  askWa:'Ask on WhatsApp',
   coTitle:'Checkout',coName:'Full name',coPhone:'Phone number',coAddr:'Delivery address',coNote:'Note (optional)',
   coSummary:'Order summary',coSend:'Place order',coHint:'Cash on delivery — no online payment. We will contact you to confirm.',
   coDone:'Order placed!',doneTitle:'Order received! 🎉',doneNo:'Order number',
@@ -805,6 +761,7 @@ const T = {
   cartTitle:'سلة التسوق',total:'المجموع',checkoutBtn:'إتمام الطلب',emptyCart:'السلة فارغة.',remove:'حذف',
   similar:'منتجات مشابهة',alsoBuy:'الزبائن يشترون أيضاً',backHome:'الرئيسية',contactPrice:'اتصل للسعر',
   colSearchPh:'ابحث في المجموعة…',noMatch:'لا توجد منتجات مطابقة.',
+  askWa:'اسألي عبر واتساب',
   coTitle:'إتمام الطلب',coName:'الاسم الكامل',coPhone:'رقم الهاتف',coAddr:'عنوان التوصيل',coNote:'ملاحظة (اختياري)',
   coSummary:'ملخص الطلب',coSend:'تأكيد الطلب',coHint:'الدفع عند الاستلام — لا يوجد دفع إلكتروني. سنتواصل معك للتأكيد.',
   coDone:'تم استلام الطلب!',doneTitle:'تم استلام طلبك! 🎉',doneNo:'رقم الطلب',
@@ -1049,9 +1006,11 @@ function renderDrawer(){
 const artInner=p=>p.img?`<img src="${esc(p.img)}" alt="${esc(p.en)}" loading="lazy">`:(icons[p.i]||icons.mug);
 const askBtn=id=>{
   const p=byId(id);
-  const msg=encodeURIComponent(`${LANG==='ar'?'مرحباً، ما سعر':'Hi, what\'s the price of'}: ${p?(LANG==='ar'?(p.ar||p.en):p.en):''}${p&&p.sku?` (${p.sku})`:''}?`);
-  return `<a class="btn-add btn-ask" href="https://wa.me/${WA_NUMBER}?text=${msg}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 12l6 6L20 6"/></svg>${t('contactPrice')}</a>`;
+  const nm = p ? (LANG==='ar' ? (p.ar||p.en) : p.en) : '';
+  const opener = LANG==='ar' ? 'مرحباً زينة! أودّ الاستفسار عن' : "Hi Zeina! I'd like to ask about";
+  const msg=encodeURIComponent(`${opener}: ${nm}${p&&p.sku?` (${p.sku})`:''}`);
+  return `<a class="btn-add btn-inquire" href="https://wa.me/${WA_NUMBER}?text=${msg}" target="_blank" rel="noopener" onclick="event.stopPropagation()" aria-label="${esc(t('askWa'))}">
+    <svg viewBox="0 0 32 32" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M16 3C9.4 3 4 8.3 4 14.9c0 2.6.9 5 2.3 7L4 29l7.3-2.3c1.9 1 4 1.6 6.2 1.6 6.6 0 12-5.3 12-11.9S22.6 3 16 3zm5.9 16.9c-.3.8-1.5 1.5-2.4 1.7-.6.1-1.4.2-4.2-.9-3.5-1.5-5.8-5-6-5.3-.2-.2-1.4-1.9-1.4-3.6s.9-2.6 1.2-2.9c.3-.3.7-.4 1-.4h.7c.2 0 .5-.1.8.6.3.8 1 2.6 1.1 2.8.1.2.2.4 0 .7-.1.3-.2.4-.4.7l-.6.7c-.2.2-.4.4-.2.8.2.4 1 1.7 2.2 2.7 1.5 1.3 2.8 1.8 3.2 2 .4.2.6.1.9-.1.2-.3 1-1.2 1.3-1.6.3-.4.5-.3.9-.2.4.1 2.4 1.1 2.8 1.3.4.2.7.3.8.5.1.1.1.9-.2 1.5z"/></svg>${t('askWa')}</a>`;
 };
 const addBtn=id=>{
   const p=byId(id);
@@ -1339,10 +1298,13 @@ function pdQty(d){
   el.textContent=Math.max(1,parseInt(el.textContent)+d);
 }
 function pdCtaHtml(target){
-  const askUrl=`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent((LANG==='ar'?'مرحباً، ما سعر':'Hi, what\'s the price of')+': '+(byId(target.id)?pname(byId(target.id)):(target.en||''))+(target.sku?` (${target.sku})`:'')+'?')}`;
+  const nm = byId(target.id) ? pname(byId(target.id)) : (target.en||'');
+  const opener = LANG==='ar' ? 'مرحباً زينة! أودّ الاستفسار عن' : "Hi Zeina! I'd like to ask about";
+  const askUrl=`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`${opener}: ${nm}${target.sku?` (${target.sku})`:''}`)}`;
   if(hasPrice(target.p)) return `<div class="qty"><button onclick="pdQty(-1)">−</button><span id="pdQty">1</span><button onclick="pdQty(1)">+</button></div>
     <button class="btn btn-primary" onclick="addToCart(${target.id},parseInt(document.getElementById('pdQty').textContent),this)">${t('addCart')}</button>`;
-  return `<a class="btn btn-primary" href="${askUrl}" target="_blank" rel="noopener">${t('contactPrice')}</a>`;
+  return `<a class="btn btn-inquire-lg" href="${askUrl}" target="_blank" rel="noopener">
+    <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M16 3C9.4 3 4 8.3 4 14.9c0 2.6.9 5 2.3 7L4 29l7.3-2.3c1.9 1 4 1.6 6.2 1.6 6.6 0 12-5.3 12-11.9S22.6 3 16 3zm5.9 16.9c-.3.8-1.5 1.5-2.4 1.7-.6.1-1.4.2-4.2-.9-3.5-1.5-5.8-5-6-5.3-.2-.2-1.4-1.9-1.4-3.6s.9-2.6 1.2-2.9c.3-.3.7-.4 1-.4h.7c.2 0 .5-.1.8.6.3.8 1 2.6 1.1 2.8.1.2.2.4 0 .7-.1.3-.2.4-.4.7l-.6.7c-.2.2-.4.4-.2.8.2.4 1 1.7 2.2 2.7 1.5 1.3 2.8 1.8 3.2 2 .4.2.6.1.9-.1.2-.3 1-1.2 1.3-1.6.3-.4.5-.3.9-.2.4.1 2.4 1.1 2.8 1.3.4.2.7.3.8.5.1.1.1.9-.2 1.5z"/></svg>${t('askWa')}</a>`;
 }
 function selectVariant(primaryId,ix){
   const p=byId(primaryId); if(!p||!p.variants) return;
