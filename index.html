@@ -460,31 +460,62 @@ mark.q{background:var(--gold-soft);color:var(--plum);font-weight:600;padding:0 2
 }
 
 /* ── Splash intro ── */
-.splash{position:fixed;inset:0;z-index:200;background:radial-gradient(circle at 50% 40%,#FFF5FA 0%,var(--blush) 55%,var(--blush-2) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overscroll-behavior:contain;touch-action:none;will-change:transform;transform:translateY(0);transition:transform .6s cubic-bezier(.22,.61,.36,1)}
-.splash.dismissing{transform:translateY(-100%)}
-.splash-logo{max-width:min(400px,70vw);max-height:52vh;width:auto;height:auto;opacity:0;transform:scale(.86);animation:splash-in 1.5s cubic-bezier(.22,.61,.36,1) .1s forwards;filter:drop-shadow(0 12px 30px rgba(140,13,84,.14))}
-.splash-hint{margin-top:44px;color:var(--plum);font-size:.86rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:10px;opacity:0;animation:splash-fade 1.2s ease .9s forwards}
-html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95rem;font-weight:700}
-.splash-chevron{width:34px;height:22px;position:relative;animation:splash-bounce 1.6s ease-in-out infinite}
-.splash-chevron::before,.splash-chevron::after{content:'';position:absolute;top:8px;width:20px;height:3px;background:var(--magenta);border-radius:2px;transform-origin:100% 50%}
-.splash-chevron::before{left:0;transform:rotate(-40deg)}
-.splash-chevron::after{right:0;transform:rotate(40deg);transform-origin:0 50%}
-.splash-enter{margin-top:22px;padding:12px 28px;border-radius:999px;background:var(--magenta);color:#fff;border:none;font-weight:600;font-size:.9rem;cursor:pointer;box-shadow:0 8px 24px rgba(186,18,112,.28);display:none}
-.splash-enter:hover{background:var(--magenta-deep)}
-@keyframes splash-in{to{opacity:1;transform:scale(1)}}
-@keyframes splash-fade{to{opacity:.9}}
-@keyframes splash-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.splash{position:fixed;inset:0;z-index:200;
+  /* Rich pink vignette — near-white pink centre through soft blush to deeper rose edge.
+     Two radials so the shadowed rim never reads flat or grey. */
+  background:radial-gradient(ellipse at 50% 44%,#FDF3F8 0%,#F9E0EE 42%,#F3C9E0 100%),
+             radial-gradient(circle at 50% 100%,rgba(232,163,197,.35),transparent 55%);
+  background-blend-mode:normal;
+  touch-action:none;overscroll-behavior:contain;
+  /* Force our own composited layer so the drag doesn't repaint the gradient */
+  transform:translate3d(0,0,0);
+  will-change:auto;         /* toggled on pointerdown */
+  transition:transform .6s cubic-bezier(.22,.61,.36,1)}
+.splash.dragging{transition:none;will-change:transform}
+.splash-inner{position:absolute;inset:0;display:block;-webkit-user-select:none;user-select:none}
+.splash-logo{position:absolute;left:50%;top:44%;transform:translate3d(-50%,-50%,0) scale(.86);opacity:0;
+  max-width:min(400px,70vw);max-height:52vh;width:auto;height:auto;
+  animation:splash-in 1.5s cubic-bezier(.22,.61,.36,1) .1s forwards;
+  filter:drop-shadow(0 12px 30px rgba(140,13,84,.14))}
+.splash-cue-wrap{position:absolute;left:50%;bottom:14%;transform:translate3d(-50%,0,0);display:flex;flex-direction:column;align-items:center;gap:16px;opacity:0;animation:splash-fade 1.1s ease 1.05s forwards}
+.splash-cue{position:relative;width:2px;height:48px;background:rgba(186,18,112,.6);border-radius:2px}
+.splash-cue-dot{position:absolute;left:50%;top:0;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:var(--magenta);
+  transform:translate3d(0,44px,0);opacity:0;
+  animation:cue-rise 1.8s cubic-bezier(.4,0,.6,1) infinite;
+  box-shadow:0 2px 6px rgba(186,18,112,.35)}
+.splash.dragging .splash-cue-dot,
+.splash.dragging .splash-logo{animation-play-state:paused}
+.splash-hint-txt{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(74,10,48,.55);font-weight:600;line-height:1;text-align:center;font-family:'Jost','Tajawal',sans-serif}
+html[dir="rtl"] .splash-hint-txt{letter-spacing:0;text-transform:none;font-size:13px;font-weight:700;color:rgba(74,10,48,.6)}
+.splash-enter{margin-top:6px;padding:11px 30px;border-radius:999px;background:transparent;color:var(--magenta);border:1.5px solid var(--magenta);font-weight:600;font-size:.9rem;cursor:pointer;display:none;transition:.2s;letter-spacing:.04em;font-family:inherit}
+.splash-enter:hover{background:var(--magenta);color:#fff}
+@keyframes splash-in{to{opacity:1;transform:translate3d(-50%,-50%,0) scale(1)}}
+@keyframes splash-fade{to{opacity:1}}
+@keyframes cue-rise{
+  0%   {transform:translate3d(0,44px,0);opacity:0}
+  22%  {opacity:.9}
+  78%  {opacity:.9}
+  100% {transform:translate3d(0,-4px,0);opacity:0}
+}
 @media(prefers-reduced-motion:reduce){
   .splash{transition:opacity .3s ease}
-  .splash.dismissing{transform:none;opacity:0}
-  .splash-logo{animation:none;opacity:1;transform:none}
-  .splash-hint{animation:none;opacity:.9}
-  .splash-chevron{animation:none;display:none}
+  .splash.dismissing{opacity:0;transform:translate3d(0,0,0)}
+  .splash-logo{animation:none;opacity:1;transform:translate3d(-50%,-50%,0) scale(1)}
+  .splash-cue-wrap{animation:none;opacity:1}
+  .splash-cue,.splash-cue-dot{display:none}
   .splash-enter{display:inline-block}
 }
 @media(max-width:520px){
-  .splash-logo{max-width:78vw}
-  .splash-hint{margin-top:32px;font-size:.78rem}
+  .splash-logo{max-width:78vw;top:42%}
+  .splash-cue-wrap{bottom:12%;gap:12px}
+  .splash-cue{height:44px}
+  @keyframes cue-rise{
+    0%{transform:translate3d(0,40px,0);opacity:0}
+    22%{opacity:.9}
+    78%{opacity:.9}
+    100%{transform:translate3d(0,-4px,0);opacity:0}
+  }
+  .splash-hint-txt{font-size:11px;letter-spacing:.14em}
 }
 .wa-btn{background:#25D366;border:none;color:#fff;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(37,211,102,.36);transition:.25s;flex-shrink:0;text-decoration:none}
 .wa-btn:hover{background:#1DAE55;transform:translateY(-1px)}
@@ -534,12 +565,14 @@ html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95r
 <body>
 
 <div class="splash" id="splash" role="dialog" aria-modal="true" aria-labelledby="splashHint">
-  <img class="splash-logo" src="assets/zeina-logo-full.png" alt="Zeina" onerror="this.style.display='none'">
-  <div class="splash-hint">
-    <div class="splash-chevron" aria-hidden="true"></div>
-    <span id="splashHint" data-splash-txt="hint">Swipe up</span>
+  <div class="splash-inner">
+    <img class="splash-logo" src="assets/zeina-logo-full.png" alt="Zeina" onerror="this.style.display='none'">
+    <div class="splash-cue-wrap">
+      <div class="splash-cue" aria-hidden="true"><div class="splash-cue-dot"></div></div>
+      <span class="splash-hint-txt" id="splashHint" data-splash-txt="hint">Swipe up</span>
+      <button class="splash-enter" type="button" id="splashEnter" data-splash-txt="enter">Enter</button>
+    </div>
   </div>
-  <button class="splash-enter" type="button" id="splashEnter" data-splash-txt="enter">Enter</button>
 </div>
 
 <header id="siteHeader">
@@ -2366,10 +2399,17 @@ function initSplash(){
   document.documentElement.style.overflow='hidden';
   document.body.style.overflow='hidden';
   let dismissing=false;
+
   const dismiss=()=>{
     if(dismissing) return; dismissing=true;
     sessionStorage.setItem('zeinaSplashSeen','1');
-    el.classList.add('dismissing');
+    el.classList.remove('dragging');
+    el.style.willChange='transform';
+    /* Slide the splash off with a smooth composited transform.
+       Setting transition + transform in the next frame guarantees the
+       browser sees a state change to animate against. */
+    el.style.transition='transform .6s cubic-bezier(.22,.61,.36,1)';
+    requestAnimationFrame(()=>{ el.style.transform='translate3d(0,-100vh,0)'; });
     document.documentElement.style.overflow='';
     document.body.style.overflow='';
     setTimeout(()=>{
@@ -2378,45 +2418,84 @@ function initSplash(){
       window.removeEventListener('keydown',onKey);
     }, reduced?350:640);
   };
-  let dragging=false, startY=0, startT=0, dy=0, lastY=0, lastT=0, vy=0, axis=null;
+
+  /* Drag state. pendingY holds the LATEST pointer position; we apply it
+     once per animation frame inside rafTick, never per pointermove. */
+  let dragging=false, axis=null, startY=0, dy=0, lastY=0, lastT=0, vy=0;
+  let pendingY=null, rafId=null, activePointer=null;
+  const rafTick=()=>{
+    if(!dragging){ rafId=null; return; }
+    if(pendingY!=null){
+      const cy=pendingY; pendingY=null;
+      if(axis===null){
+        const dyt=cy-startY;
+        if(Math.abs(dyt)>6) axis = dyt<0 ? 'up' : 'down';
+      }
+      if(axis==='down'){
+        endDrag(true /*bail*/);
+        return;
+      }
+      dy = cy - startY;
+      if(dy>0) dy*=0.35;                             // rubber-band pull-down
+      const t = Math.min(dy, 0);
+      el.style.transform = 'translate3d(0,'+t.toFixed(1)+'px,0)';
+      const now = performance.now();
+      const dt = Math.max(now-lastT, 1);
+      vy = (cy - lastY) / dt;                        // px per ms
+      lastY = cy; lastT = now;
+    }
+    rafId = requestAnimationFrame(rafTick);
+  };
+  const endDrag = (bail)=>{
+    if(!dragging) return;
+    dragging=false;
+    el.classList.remove('dragging');
+    if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
+    try{ if(activePointer!=null) el.releasePointerCapture(activePointer); }catch(_){}
+    activePointer=null;
+    if(bail){
+      /* User pulled downward (or we lost the gesture) — snap back cleanly */
+      el.style.transition='transform .28s ease-out';
+      requestAnimationFrame(()=>{ el.style.transform='translate3d(0,0,0)'; });
+      setTimeout(()=>{ el.style.transition=''; el.style.willChange=''; }, 320);
+      return;
+    }
+    const h=window.innerHeight||600;
+    const swipedFar = dy < -h*0.25;
+    const swipedFast = vy < -0.6;
+    if(swipedFar || swipedFast){
+      dismiss();
+    } else {
+      /* Spring back to 0 with a soft ease-out */
+      el.style.transition='transform .32s cubic-bezier(.34,1.2,.64,1)';
+      requestAnimationFrame(()=>{ el.style.transform='translate3d(0,0,0)'; });
+      setTimeout(()=>{ el.style.transition=''; el.style.willChange=''; }, 340);
+    }
+  };
+
   const onDown=e=>{
-    if(reduced) return;
+    if(reduced || dismissing) return;
+    if(e.pointerType==='mouse' && e.button!==0) return;
     dragging=true; axis=null;
-    startY=e.clientY; startT=performance.now();
-    lastY=e.clientY; lastT=startT; dy=0; vy=0;
+    startY=e.clientY;
+    lastY=e.clientY; lastT=performance.now();
+    dy=0; vy=0; pendingY=null;
+    activePointer=e.pointerId;
+    /* Prime the composited layer AND kill inherited transitions in one shot.
+       .dragging carries both transition:none and will-change:transform so we
+       don't hit the DOM twice for style writes. */
+    el.classList.add('dragging');
     try{ el.setPointerCapture(e.pointerId) }catch(_){}
+    if(rafId==null) rafId = requestAnimationFrame(rafTick);
   };
   const onMove=e=>{
     if(!dragging) return;
-    const cy=e.clientY;
-    const dxTot=Math.abs(e.clientX-(e.clientX-0));  // not tracking x direction — treat as up-only
-    if(axis===null){
-      const dyt=cy-startY;
-      if(Math.abs(dyt)>6){ axis = dyt<0 ? 'up' : 'down'; }
-    }
-    if(axis==='down'){ dragging=false; return; }  // don't fight downward pull
-    dy=cy-startY;
-    if(dy>0) dy*=0.35;    // rubber-band if pulled downward
-    const t=Math.min(dy,0);
-    el.style.transition='none';
-    el.style.transform=`translateY(${t}px)`;
-    const now=performance.now();
-    const dt=Math.max(now-lastT,1);
-    vy=(cy-lastY)/dt;
-    lastY=cy; lastT=now;
-    e.preventDefault?.();
+    pendingY = e.clientY;                             // no style writes here
+    if(e.cancelable) e.preventDefault();
   };
-  const onUp=e=>{
-    if(!dragging) return;
-    dragging=false;
-    try{ el.releasePointerCapture(e.pointerId) }catch(_){}
-    const h=window.innerHeight||600;
-    el.style.transition='';
-    const swipedFar = dy < -h*0.25;
-    const swipedFast = vy < -0.6;
-    if(swipedFar||swipedFast) dismiss();
-    else el.style.transform='translateY(0)';
-  };
+  const onUp=e=>{ if(!dragging) return; endDrag(false); };
+  const onCancel=e=>{ if(!dragging) return; endDrag(true); };
+
   const onWheel=e=>{ if(reduced||dismissing) return; if(e.deltaY!==0) dismiss(); };
   const onKey=e=>{ if(dismissing) return; if(e.key==='Tab') return; dismiss(); };
   const onClick=e=>{
@@ -2427,7 +2506,7 @@ function initSplash(){
   el.addEventListener('pointerdown',onDown);
   el.addEventListener('pointermove',onMove);
   el.addEventListener('pointerup',onUp);
-  el.addEventListener('pointercancel',onUp);
+  el.addEventListener('pointercancel',onCancel);
   el.addEventListener('click',onClick);
   window.addEventListener('wheel',onWheel,{passive:true});
   window.addEventListener('keydown',onKey);
