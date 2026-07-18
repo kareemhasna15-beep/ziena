@@ -1420,11 +1420,12 @@ async function sendOrder(){
   setTimeout(()=>sendOrderEmail(orderId, orderPayload, totalTxt, currency).catch(e=>console.warn('email failed',e)), 0);
 }
 
-/* EmailJS: fire-and-forget. Populate the 3 IDs below after creating the EmailJS account. */
+/* EmailJS: fire-and-forget notification to hamzaksa28@outlook.com (owner-only).
+   Owner email is configured in the EmailJS template's To Email field, not here. */
 const EMAILJS = {
-  PUBLIC_KEY:  '',   // e.g. 'user_ABCDEF12345'
-  SERVICE_ID:  '',   // e.g. 'service_xxx'
-  TEMPLATE_ID: '',   // e.g. 'template_xxx'
+  PUBLIC_KEY:  '43x04N7ld3v-8HkMN',
+  SERVICE_ID:  'service_fyzh9np',
+  TEMPLATE_ID: 'template_8iehaqt',
 };
 let _emailjsLoaded=null;
 function loadEmailJS(){
