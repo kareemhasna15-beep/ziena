@@ -1440,6 +1440,24 @@ function loadEmailJS(){
   });
   return _emailjsLoaded;
 }
+/* Normalise a Lebanese phone into the wa.me / tel: form:
+   strip spaces/dashes/parens/+ prefix and any '00' international prefix,
+   drop a leading 0 (Lebanese local trunk prefix), and prepend '961' if
+   it isn't already country-coded. Result is digits only, always starts
+   with 961. Examples:
+     '03 123456'          -> '9613123456'
+     '+961 71 234 567'    -> '96171234567'
+     '00961 71-234-567'   -> '96171234567'
+     '71/234567'          -> '96171234567' */
+function cleanLebanesePhone(raw){
+  if(!raw) return '';
+  let s = String(raw).replace(/[^\d+]/g,'');
+  if(s.startsWith('+'))  s = s.slice(1);
+  if(s.startsWith('00')) s = s.slice(2);
+  if(s.startsWith('961')) return s;
+  if(s.startsWith('0'))   s = s.slice(1);
+  return '961' + s;
+}
 async function sendOrderEmail(orderId, o, totalTxt, currency){
   if(!EMAILJS.PUBLIC_KEY || !EMAILJS.SERVICE_ID || !EMAILJS.TEMPLATE_ID) return;
   try{
@@ -1449,6 +1467,7 @@ async function sendOrderEmail(orderId, o, totalTxt, currency){
       order_id: '#'+orderId,
       customer_name: o.name,
       customer_phone: o.phone,
+      customer_phone_clean: cleanLebanesePhone(o.phone),
       customer_address: o.address,
       customer_note: o.note || '—',
       items_list: itemsPlain,
