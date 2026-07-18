@@ -2419,42 +2419,22 @@ function initSplash(){
     }, reduced?350:640);
   };
 
-  /* Drag state. pendingY holds the LATEST pointer position; we apply it
-     once per animation frame inside rafTick, never per pointermove. */
+  /* Simple direct-write drag. transform:translate3d(0,0,0) baked into the
+     base .splash CSS already promotes the element to its own composited
+     layer, so each translate is cheap. The .dragging class carries
+     transition:none so writes don't fight an inherited transition. */
   let dragging=false, axis=null, startY=0, dy=0, lastY=0, lastT=0, vy=0;
-  let pendingY=null, rafId=null, activePointer=null;
-  const rafTick=()=>{
-    if(!dragging){ rafId=null; return; }
-    if(pendingY!=null){
-      const cy=pendingY; pendingY=null;
-      if(axis===null){
-        const dyt=cy-startY;
-        if(Math.abs(dyt)>6) axis = dyt<0 ? 'up' : 'down';
-      }
-      if(axis==='down'){
-        endDrag(true /*bail*/);
-        return;
-      }
-      dy = cy - startY;
-      if(dy>0) dy*=0.35;                             // rubber-band pull-down
-      const t = Math.min(dy, 0);
-      el.style.transform = 'translate3d(0,'+t.toFixed(1)+'px,0)';
-      const now = performance.now();
-      const dt = Math.max(now-lastT, 1);
-      vy = (cy - lastY) / dt;                        // px per ms
-      lastY = cy; lastT = now;
-    }
-    rafId = requestAnimationFrame(rafTick);
-  };
-  const endDrag = (bail)=>{
-    if(!dragging) return;
+  let activePointer=null;
+
+  const applyTranslate=t=>{ el.style.transform='translate3d(0,'+t.toFixed(1)+'px,0)'; };
+
+  const endDrag=(bail)=>{
+    if(!dragging && !bail) return;
     dragging=false;
-    el.classList.remove('dragging');
-    if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
     try{ if(activePointer!=null) el.releasePointerCapture(activePointer); }catch(_){}
     activePointer=null;
     if(bail){
-      /* User pulled downward (or we lost the gesture) — snap back cleanly */
+      el.classList.remove('dragging');
       el.style.transition='transform .28s ease-out';
       requestAnimationFrame(()=>{ el.style.transform='translate3d(0,0,0)'; });
       setTimeout(()=>{ el.style.transition=''; el.style.willChange=''; }, 320);
@@ -2464,9 +2444,12 @@ function initSplash(){
     const swipedFar = dy < -h*0.25;
     const swipedFast = vy < -0.6;
     if(swipedFar || swipedFast){
+      /* Fly out via inline transform. Removing .dragging swaps transition
+         back to the base .6s from CSS; then rAF sets the new transform. */
+      el.classList.remove('dragging');
       dismiss();
     } else {
-      /* Spring back to 0 with a soft ease-out */
+      el.classList.remove('dragging');
       el.style.transition='transform .32s cubic-bezier(.34,1.2,.64,1)';
       requestAnimationFrame(()=>{ el.style.transform='translate3d(0,0,0)'; });
       setTimeout(()=>{ el.style.transition=''; el.style.willChange=''; }, 340);
@@ -2479,53 +2462,42 @@ function initSplash(){
     dragging=true; axis=null;
     startY=e.clientY;
     lastY=e.clientY; lastT=performance.now();
-    dy=0; vy=0; pendingY=null;
+    dy=0; vy=0;
     activePointer=e.pointerId;
-    /* Prime the composited layer AND kill inherited transitions in one shot.
-       .dragging carries both transition:none and will-change:transform so we
-       don't hit the DOM twice for style writes. */
-    el.classList.add('dragging');
+    el.classList.add('dragging');   // transition:none + will-change:transform in one class change
     try{ el.setPointerCapture(e.pointerId) }catch(_){}
-    if(rafId==null) rafId = requestAnimationFrame(rafTick);
   };
   const onMove=e=>{
     if(!dragging) return;
-    pendingY = e.clientY;                             // no style writes here
-    if(e.cancelable) e.preventDefault();
-  };
-  /* Flush the current pointer Y into dy/vy synchronously so a fast flick
-     (where pointerup fires before the next rAF tick) still has fresh state
-     to decide dismiss-vs-springback against. */
-  const flushToRelease=cy=>{
+    const cy=e.clientY;
     if(axis===null){
-      const dyt = cy - startY;
-      if(Math.abs(dyt) > 6) axis = dyt < 0 ? 'up' : 'down';
+      const dyt=cy-startY;
+      if(Math.abs(dyt)>6){ axis = dyt<0 ? 'up' : 'down'; }
+      else return;                                    // below threshold, don't write yet
     }
-    if(axis==='down' || axis===null){
-      return axis==='down' ? 'down' : 'tap';
+    if(axis==='down'){                                 // let the browser handle downward pulls
+      endDrag(true); return;
     }
     dy = cy - startY;
     if(dy > 0) dy *= 0.35;
+    applyTranslate(Math.min(dy, 0));                   // direct GPU-composited write
     const now = performance.now();
-    const dt = Math.max(now - lastT, 1);
+    const dt = Math.max(now-lastT, 1);
     vy = (cy - lastY) / dt;
     lastY = cy; lastT = now;
-    return 'move';
+    if(e.cancelable) e.preventDefault();
   };
   const onUp=e=>{
-    if(!dragging) return;
-    const outcome = flushToRelease(e.clientY);
-    if(outcome === 'tap'){
-      /* Below-threshold tap — do nothing here; the browser's synthesized
-         click event will fire onClick and dismiss the splash. */
+    if(!dragging){ return; }
+    /* If we never crossed the 6px threshold, treat as a tap and let the
+       synthesized click event dismiss via onClick. */
+    if(axis===null){
       dragging=false;
-      if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
       try{ if(activePointer!=null) el.releasePointerCapture(activePointer); }catch(_){}
       activePointer=null;
       el.classList.remove('dragging');
       return;
     }
-    if(outcome === 'down'){ endDrag(true); return; }
     endDrag(false);
   };
   const onCancel=e=>{ if(!dragging) return; endDrag(true); };
