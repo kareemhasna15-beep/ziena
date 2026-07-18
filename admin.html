@@ -1529,21 +1529,36 @@ async function saveEditModal(){
       const {error}=await sb.from('products').update(primaryPayload).eq('id',p.id);
       if(error) throw error;
     }
-    // 2) Handle quick-size children if not a real family
-    if(!s.isReal){
+    // 2) Handle quick-size children if not a real variant family.
+    //    CRITICAL SAFETY GATE: only touch other rows when the product is
+    //    ACTUALLY part of a sz- family. Without this guard,
+    //    "x.variant_group === p.variant_group" reduces to "== null" when
+    //    editing a non-variant product and matches every non-variant row in
+    //    the DB — the previous version of this code deleted 100+ products
+    //    on a single save of an unrelated normal product.
+    const isQuickSizeFamily = !!(p.variant_group && String(p.variant_group).startsWith('sz-'));
+    const willBeQuickSize   = !s.isReal && s.hasSizes;
+    if(isQuickSizeFamily || willBeQuickSize){
       const groupTag = primaryPayload.variant_group;
-      const existingChildren=PRODUCTS.filter(x=>x.variant_group===p.variant_group && x.id!==p.id);
+      const targetGroup = p.variant_group || groupTag;
+      const existingChildren = targetGroup
+        ? PRODUCTS.filter(x => x.variant_group === targetGroup && x.id !== p.id)
+        : [];
       const existingBySize={};
       existingChildren.forEach(c=>{
         const key = c.variant_order===2 ? 'M' : c.variant_order===3 ? 'L' : null;
         if(key) existingBySize[key]=c;
       });
       const targetSizes = s.hasSizes ? ['M','L'] : [];
-      // Sizes disabled -> delete all children
+      // Sizes turned OFF — only delete siblings when we were a sz- family AND
+      // the user actively toggled sizes off. Never on a first-time save of a
+      // normal product.
       if(!s.hasSizes){
-        for(const c of existingChildren){
-          const {error}=await sb.from('products').delete().eq('id',c.id);
-          if(error) throw error;
+        if(isQuickSizeFamily && s.initialHasSizes && existingChildren.length){
+          for(const c of existingChildren){
+            const {error}=await sb.from('products').delete().eq('id',c.id);
+            if(error) throw error;
+          }
         }
       } else {
         for(const key of targetSizes){
