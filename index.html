@@ -1462,15 +1462,55 @@ async function sendOrderEmail(orderId, o, totalTxt, currency){
   if(!EMAILJS.PUBLIC_KEY || !EMAILJS.SERVICE_ID || !EMAILJS.TEMPLATE_ID) return;
   try{
     await loadEmailJS();
-    const itemsPlain=(o.items||[]).map(i=>`${i.qty} × ${i.name}${i.sku?' ['+i.sku+']':''} — $${(i.qty*i.unit).toFixed(2)}`).join('\n');
+    const items = o.items || [];
+    const isLBP = currency === 'LBP';
+    /* Item unit prices are stored in USD (cart canonicalises there). Format
+       everything in the customer's chosen currency so the email numbers
+       match what they saw when they placed the order. */
+    const fmtMoney = (usdNum) => {
+      const n = +usdNum;
+      if (!isLBP) return '$' + n.toFixed(2);
+      const lbp = Math.round(n * LBP_RATE / 500) * 500;
+      return lbp.toLocaleString('en-US') + ' ل.ل';
+    };
+    const subtotalNum = items.reduce((s,i)=>s + (+i.qty||0)*(+i.unit||0), 0);
+    const itemCount = items.reduce((s,i)=>s + (+i.qty||0), 0);
+
+    /* Plain-text version of the items list — one entry, then an indented
+       'unit × qty = line' beneath it. Readable in any mail client. */
+    const itemsPlain = items.map(i => {
+      const nm = i.name + (i.sku ? ' [' + i.sku + ']' : '');
+      const line = (+i.qty||0) * (+i.unit||0);
+      return `  ${i.qty} × ${nm}\n     ${fmtMoney(i.unit)} each · line ${fmtMoney(line)}`;
+    }).join('\n\n');
+
+    /* HTML rows for the styled template. Pre-escape user-controlled fields
+       so a stray '<' in a product name or SKU can't break the markup. */
+    const escHtml = s => String(s??'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    const itemsHtml = items.map(i => {
+      const line = (+i.qty||0) * (+i.unit||0);
+      return `<tr>` +
+        `<td style="padding:10px 12px 10px 0;border-bottom:1px solid #F6DFEC;vertical-align:top">` +
+          `<div style="font-weight:600;color:#4A0A30">${escHtml(i.name)}</div>` +
+          (i.sku ? `<div style="color:#7A6470;font-size:12px;font-family:Menlo,Consolas,'Courier New',monospace;margin-top:2px">${escHtml(i.sku)}</div>` : '') +
+        `</td>` +
+        `<td style="padding:10px 8px;border-bottom:1px solid #F6DFEC;text-align:right;white-space:nowrap;color:#7A6470;font-size:14px">×${escHtml(i.qty)}</td>` +
+        `<td style="padding:10px 8px;border-bottom:1px solid #F6DFEC;text-align:right;white-space:nowrap;color:#7A6470;font-size:14px">${escHtml(fmtMoney(i.unit))}</td>` +
+        `<td style="padding:10px 0 10px 12px;border-bottom:1px solid #F6DFEC;text-align:right;white-space:nowrap;color:#BA1270;font-weight:600">${escHtml(fmtMoney(line))}</td>` +
+      `</tr>`;
+    }).join('');
+
     const params={
       order_id: '#'+orderId,
       customer_name: o.name,
-      customer_phone: o.phone,
-      customer_phone_clean: cleanLebanesePhone(o.phone),
+      customer_phone: o.phone,                            // raw, as the customer typed it (spaces preserved)
+      customer_phone_clean: cleanLebanesePhone(o.phone),  // digits only, 961-prefixed, for wa.me / tel:
       customer_address: o.address,
       customer_note: o.note || '—',
       items_list: itemsPlain,
+      items_html: itemsHtml,
+      item_count: itemCount,
+      subtotal: fmtMoney(subtotalNum),
       total: totalTxt,
       currency,
       site_name: 'Zeina — Home & Kitchen Accessories'
