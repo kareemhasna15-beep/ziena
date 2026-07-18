@@ -138,11 +138,87 @@ tr:hover td{background:#FDF8FB}
 .err-list{background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:.82rem}
 .err-list ul{margin:6px 0 0 18px}
 .import-diag{font-size:.78rem;color:var(--ink-soft);margin-top:10px;font-family:'SFMono-Regular',ui-monospace,monospace}
+
+/* full-page product editor */
+.edit-modal{position:fixed;inset:0;z-index:120;display:none;flex-direction:column;background:rgba(74,10,48,.55);backdrop-filter:blur(6px)}
+.edit-modal.open{display:flex}
+.edit-modal-panel{background:var(--card);width:min(880px,100%);max-height:100%;margin:auto;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+@media(max-width:640px){.edit-modal{padding:0}.edit-modal-panel{border-radius:0;width:100%;height:100%;max-height:100%}}
+.edit-modal-head{background:var(--plum);color:#fff;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.edit-modal-head h2{font-size:1.05rem;font-weight:600;color:#fff;margin:0}
+.edit-modal-head .sub{font-size:.72rem;letter-spacing:.06em;color:rgba(255,255,255,.6);text-transform:uppercase;margin-top:2px}
+.edit-modal-close{background:transparent;border:none;color:#fff;font-size:1.8rem;line-height:1;cursor:pointer;padding:0 6px;transition:.2s}
+.edit-modal-close:hover{color:var(--gold)}
+.edit-modal-body{flex:1;overflow-y:auto;padding:22px}
+.edit-modal-foot{padding:14px 22px;border-top:1px solid var(--blush-2);background:#FDF8FB;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.edit-modal-foot .status{color:var(--ink-soft);font-size:.82rem;margin-inline-end:auto}
+.edit-modal-foot .status.saved{color:#22C55E;font-weight:600}
+.edit-modal-foot .status.err{color:var(--bad);font-weight:600}
+
+.slot-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:8px}
+@media(max-width:640px){.slot-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.pslot{position:relative;aspect-ratio:1;border-radius:12px;background:var(--blush);border:1.5px dashed var(--blush-2);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;user-select:none}
+.pslot:hover{border-color:var(--magenta);background:var(--blush-2)}
+.pslot.filled{border-style:solid;background:#fff;cursor:move}
+.pslot.filled:hover{border-color:var(--gold-soft)}
+.pslot img{width:100%;height:100%;object-fit:cover;pointer-events:none}
+.pslot .empty{color:var(--ink-soft);font-size:.72rem;text-align:center;padding:0 4px;pointer-events:none}
+.pslot .empty span{display:block;font-size:1.6rem;color:var(--magenta);margin-bottom:2px}
+.pslot .badge{position:absolute;top:6px;inset-inline-start:6px;background:rgba(74,10,48,.85);color:#fff;font-size:.62rem;font-weight:700;padding:3px 7px;border-radius:6px;letter-spacing:.04em}
+.pslot .size-badge{position:absolute;top:6px;inset-inline-end:6px;background:var(--gold);color:#fff;font-size:.62rem;font-weight:700;padding:3px 7px;border-radius:6px;letter-spacing:.04em}
+.pslot .rm{position:absolute;bottom:6px;inset-inline-end:6px;background:rgba(0,0,0,.65);color:#fff;border:none;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:.9rem;line-height:1;padding:0;display:flex;align-items:center;justify-content:center}
+.pslot .rm:hover{background:var(--bad)}
+.pslot.dragging{opacity:.4}
+.pslot.drop-target{outline:2px dashed var(--magenta);outline-offset:-2px}
+.slot-caption{font-size:.72rem;color:var(--ink-soft);text-align:center;font-weight:600;margin-top:2px;letter-spacing:.04em}
+
+.size-toggle{display:flex;align-items:center;gap:12px;background:var(--blush);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.size-toggle-info{flex:1;font-size:.86rem}
+.size-toggle-info b{color:var(--plum)}
+.size-toggle-info .muted{color:var(--ink-soft);font-size:.76rem;margin-top:2px}
+.size-switch{position:relative;display:inline-block;width:52px;height:28px;flex-shrink:0}
+.size-switch input{opacity:0;width:0;height:0}
+.size-switch .slider{position:absolute;cursor:pointer;inset:0;background:#e0d0d8;border-radius:999px;transition:.2s}
+.size-switch .slider::before{position:absolute;content:'';height:22px;width:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.size-switch input:checked + .slider{background:var(--magenta)}
+.size-switch input:checked + .slider::before{transform:translateX(24px)}
+
+.size-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+@media(max-width:520px){.size-grid{grid-template-columns:1fr}}
+.size-card{border:1.5px solid var(--blush-2);border-radius:12px;padding:12px}
+.size-card.active{border-color:var(--magenta);background:#FDF8FB}
+.size-card h4{font-size:.86rem;color:var(--plum);margin-bottom:8px;display:flex;justify-content:space-between}
+.size-card h4 .lbl-ar{color:var(--ink-soft);font-size:.78rem;font-weight:500}
+.size-card input{width:100%;padding:9px 11px;border:1.5px solid var(--blush-2);border-radius:8px;background:#fff;font-size:.9rem}
+.size-card input:focus{outline:none;border-color:var(--magenta)}
+.size-card .hint{font-size:.68rem;color:var(--ink-soft);margin-top:4px}
+.real-variant-notice{background:#FEF3C7;border:1px solid #FDE68A;color:#92400E;border-radius:10px;padding:10px 12px;font-size:.8rem;margin-bottom:12px}
+
+.edit-section{margin-bottom:22px}
+.edit-section h3{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--plum);font-weight:700;margin-bottom:10px;border-bottom:1px solid var(--blush-2);padding-bottom:6px}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <div class="toast" id="toast"></div>
+
+<div class="edit-modal" id="editModal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="edit-modal-panel">
+    <div class="edit-modal-head">
+      <div>
+        <h2 id="editModalTitle">Edit product</h2>
+        <div class="sub" id="editModalSub"></div>
+      </div>
+      <button class="edit-modal-close" type="button" onclick="closeEditModal()" aria-label="Close">×</button>
+    </div>
+    <div class="edit-modal-body" id="editModalBody"></div>
+    <div class="edit-modal-foot">
+      <div class="status" id="editModalStatus"></div>
+      <button class="btn btn-g" type="button" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-p" type="button" onclick="saveEditModal()">Save changes</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ═══════════ SUPABASE CONFIG — same keys as index.html ═══════════ */
@@ -321,18 +397,36 @@ function render(){
         ${ed?`<button class="btn btn-g" onclick="editingId=null;render()">Cancel</button>`:''}
       </div>
     </div>
-    <div class="panel"><h3>All products (${PRODUCTS.length})</h3>
-      <table><tr><th>SKU</th><th>Name</th><th>Category</th><th>Price</th><th>Cost</th><th>Imgs</th><th>Best</th><th></th></tr>
+    <div class="panel"><h3>All products · Quick pricing (${PRODUCTS.length})</h3>
+      <p class="muted" style="margin-bottom:12px;font-size:.78rem">Prices and descriptions here save on blur — click any cell, type, and tab away. Use <b>Edit</b> for full changes (photos, sizes, category…).</p>
+      <table>
+        <tr>
+          <th>SKU</th><th>Name</th><th>Price</th><th>Cost</th>
+          <th>Description (EN)</th><th>Description (AR)</th>
+          <th>Cat</th><th>Imgs</th><th>Best</th><th></th>
+        </tr>
       ${PRODUCTS.map(p=>{const n=productImages(p).length;return `<tr>
-        <td><code style="font-size:.78rem">${esc(p.sku||'')}</code></td>
-        <td>${esc(p.en)}<br><span class="muted" dir="rtl" style="display:inline-block">${esc(p.ar||'')}</span></td>
+        <td><code style="font-size:.72rem">${esc(p.sku||'')}</code></td>
+        <td style="min-width:180px">${esc(p.en)}<br><span class="muted" dir="rtl" style="display:inline-block">${esc(p.ar||'')}</span></td>
+        <td><input type="number" step="0.5" min="0" value="${p.price!=null?p.price:''}" placeholder="—"
+              style="width:78px;padding:6px 8px;border:1.5px solid var(--blush-2);border-radius:8px;font-size:.82rem;background:#FDFBFC"
+              onblur="quickSaveField(${p.id},'price',this.value,this)"
+              onkeydown="if(event.key==='Enter')this.blur()"></td>
+        <td><input type="number" step="0.01" min="0" value="${p.cost_usd!=null?p.cost_usd:''}"
+              style="width:74px;padding:6px 8px;border:1.5px solid var(--blush-2);border-radius:8px;font-size:.82rem;background:#FDFBFC;color:var(--ink-soft)"
+              onblur="quickSaveField(${p.id},'cost_usd',this.value,this)"
+              onkeydown="if(event.key==='Enter')this.blur()"></td>
+        <td><textarea rows="2" placeholder="—"
+              style="width:200px;padding:6px 8px;border:1.5px solid var(--blush-2);border-radius:8px;font-size:.78rem;background:#FDFBFC;font-family:inherit;resize:vertical"
+              onblur="quickSaveField(${p.id},'description_en',this.value,this)">${esc(p.description_en||'')}</textarea></td>
+        <td><textarea rows="2" dir="rtl" placeholder="—"
+              style="width:200px;padding:6px 8px;border:1.5px solid var(--blush-2);border-radius:8px;font-size:.78rem;background:#FDFBFC;font-family:inherit;resize:vertical"
+              onblur="quickSaveField(${p.id},'description_ar',this.value,this)">${esc(p.description_ar||'')}</textarea></td>
         <td>${cname(p.category)}</td>
-        <td>${p.price!=null?'$'+p.price:'<span class="muted">— ask —</span>'}</td>
-        <td class="muted">${p.cost_usd!=null?'$'+p.cost_usd:''}</td>
         <td>${n>0?(n>1?`🖼×${n}`:'🖼'):''}</td>
         <td>${p.best?'★':''}</td>
         <td style="white-space:nowrap">
-          <button class="act edit" onclick="editingId=${p.id};pickedIcon='${p.icon||'mug'}';render();window.scrollTo({top:0})">Edit</button>
+          <button class="act edit" onclick="openEditModal(${p.id})">Edit</button>
           <button class="act del" onclick="delProduct(${p.id},'${esc(p.en).replace(/'/g,"\\'")}')">Delete</button>
         </td></tr>`}).join('')}
       </table>
@@ -810,6 +904,10 @@ function reviewCardHtml(r){
         <div class="fg"><label>Cost (USD)</label><input type="number" step="0.01" value="${r.cost_usd!=null?r.cost_usd:''}" oninput="onReviewEdit('${r.rid}','cost_usd',this.value)"></div>
         <div class="fg"><label>Category</label><select onchange="onReviewEdit('${r.rid}','category',this.value)">${catSel}</select></div>
         <div class="fg"><label>Sub-category</label><input value="${esc(r.sub_category||'')}" oninput="onReviewEdit('${r.rid}','sub_category',this.value)"></div>
+        <div class="fg" style="grid-column:1/-1"><label>Description (EN)</label>
+          <textarea rows="2" maxlength="600" style="width:100%;padding:8px 10px;border:1.5px solid var(--blush-2);border-radius:8px;font-size:.84rem;background:#FDFBFC;font-family:inherit;resize:vertical" placeholder="(Optional)" oninput="onReviewEdit('${r.rid}','description_en',this.value)">${esc(r.description_en||'')}</textarea></div>
+        <div class="fg" style="grid-column:1/-1"><label>Description (AR)</label>
+          <textarea rows="2" dir="rtl" maxlength="600" style="width:100%;padding:8px 10px;border:1.5px solid var(--blush-2);border-radius:8px;font-size:.84rem;background:#FDFBFC;font-family:inherit;resize:vertical" placeholder="(اختياري)" oninput="onReviewEdit('${r.rid}','description_ar',this.value)">${esc(r.description_ar||'')}</textarea></div>
       </div>
     </div>
     <div class="review-actions">
@@ -849,7 +947,9 @@ const NAME_KEYS={
   ar:['name (arabic)','name arabic','arabic name','ar name','name ar'],
   category:['category','sub category','sub-category'],
   price:['retail price','retail','price','price (usd)','usd retail'],
-  cost:['cost (usd)','cost','cost usd','purchase price']
+  cost:['cost (usd)','cost','cost usd','purchase price'],
+  desc_en:['description','description (english)','description en','desc','desc en','english description'],
+  desc_ar:['description (arabic)','description ar','desc ar','arabic description']
 };
 function matchKey(header,alts){
   const h=String(header||'').toLowerCase().trim().replace(/\s+/g,' ');
@@ -982,6 +1082,8 @@ async function parseImportFile(file){
       barcode: get('barcode'),
       category: coarse,
       sub_category: rawCat || (existing?existing.sub_category:''),
+      description_en: get('desc_en') || (existing?existing.description_en:'') || '',
+      description_ar: get('desc_ar') || (existing?existing.description_ar:'') || '',
       price: (price!=null && !isNaN(price)) ? price : null,
       cost_usd: (cost_usd!=null && !isNaN(cost_usd)) ? cost_usd : null,
       imgPreview: imgUrlPreview,
@@ -1059,6 +1161,8 @@ async function commitOneRow(r){
     const row = {
       sku: r.sku||null, barcode: r.barcode||null,
       en: r.en, ar: r.ar,
+      description_en: r.description_en || null,
+      description_ar: r.description_ar || null,
       category: r.category || 'decor',
       sub_category: r.sub_category || null,
       cost_usd: r.cost_usd,
@@ -1153,6 +1257,382 @@ render=function(){
     paintImgManager();
   }
 };
+
+/* ══════════ Full product edit modal (Task 17) ══════════ */
+let EDIT=null;               // active edit state or null
+let editSlotIx=-1;           // pending upload target
+let editSlotDragIx=-1;       // drag reorder
+const SIZE_LABELS = { S:{en:'Small',ar:'صغير'}, M:{en:'Medium',ar:'وسط'}, L:{en:'Large',ar:'كبير'} };
+const DESC_MAX = 600;
+
+function openEditModal(id){
+  const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
+  editingId=id;
+  const imgs=productImages(p);
+  EDIT={
+    id:p.id, original:p,
+    en:p.en||'', ar:p.ar||'',
+    descEn:p.description_en||'', descAr:p.description_ar||'',
+    sku:p.sku||'', barcode:p.barcode||'',
+    price:p.price!=null?String(p.price):'', cost:p.cost_usd!=null?String(p.cost_usd):'',
+    category:p.category||'decor', best:!!p.best, icon:p.icon||'mug',
+    photos:imgs.slice(0,5),
+    hasSizes:!!p.variant_group,
+    isReal: !!p.variant_group && !String(p.variant_group).startsWith('sz-'),
+    siblings:[],
+    sizePrices:{S:p.price!=null?String(p.price):'', M:'', L:''},
+    initialHasSizes:!!p.variant_group,
+    dirty:false, saving:false
+  };
+  if(p.variant_group){
+    EDIT.siblings=PRODUCTS.filter(x=>x.variant_group===p.variant_group).sort((a,b)=>(a.variant_order||0)-(b.variant_order||0));
+    // Populate size prices + photos from siblings for quick-size families
+    if(!EDIT.isReal){
+      const orderToKey={'2':'M','3':'L'};
+      EDIT.siblings.forEach(s=>{
+        const k=orderToKey[String(s.variant_order)]; if(!k) return;
+        EDIT.sizePrices[k]=s.price!=null?String(s.price):'';
+        const si=productImages(s);
+        // Copy sibling's main photo into the appropriate slot if primary's slot is empty
+        const targetIx = k==='M'?1:2;
+        if(!EDIT.photos[targetIx] && si[0]) EDIT.photos[targetIx]=si[0];
+      });
+    }
+  }
+  document.getElementById('editModalTitle').textContent='Edit product';
+  const sub=[
+    p.sku?`SKU ${p.sku}`:'',
+    p.category?cname(p.category):'',
+    p.variant_group?(EDIT.isReal?'variant family: '+p.variant_group:'has sizes'):''
+  ].filter(Boolean).join(' · ');
+  document.getElementById('editModalSub').textContent=sub;
+  document.getElementById('editModal').classList.add('open');
+  document.getElementById('editModal').setAttribute('aria-hidden','false');
+  document.body.style.overflow='hidden';
+  paintEditModal();
+  setEditStatus('','');
+}
+function closeEditModal(force){
+  if(!EDIT) return;
+  if(!force && EDIT.dirty && !confirm('Discard unsaved changes?')) return;
+  EDIT=null; editingId=null;
+  document.getElementById('editModal').classList.remove('open');
+  document.getElementById('editModal').setAttribute('aria-hidden','true');
+  document.body.style.overflow='';
+  render();
+}
+function setEditStatus(msg,kind){
+  const el=document.getElementById('editModalStatus');
+  el.className='status'+(kind?' '+kind:'');
+  el.textContent=msg||'';
+}
+function renderPhotoSlot(i){
+  const src=EDIT.photos[i];
+  const isMain=i===0;
+  let sizeBadge='';
+  if(EDIT.hasSizes && i<3){
+    const key=['S','M','L'][i];
+    sizeBadge=`<span class="size-badge">${key} · ${SIZE_LABELS[key].en}</span>`;
+  }
+  if(src){
+    return `<div class="pslot filled" draggable="true" data-ix="${i}"
+      ondragstart="slotDragStart(event,${i})" ondragover="slotDragOver(event,${i})"
+      ondragleave="slotDragLeave(event)" ondrop="slotDrop(event,${i})" ondragend="slotDragEnd(event)"
+      onclick="pickSlotUpload(${i})">
+      <img src="${esc(asImgUrl(src))}" alt="">
+      ${isMain?'<span class="badge">MAIN</span>':''}
+      ${sizeBadge}
+      <button type="button" class="rm" onclick="event.stopPropagation();removeSlot(${i})" title="Remove">×</button>
+    </div>`;
+  }
+  return `<div class="pslot" data-ix="${i}"
+    ondragover="slotDragOver(event,${i})" ondragleave="slotDragLeave(event)" ondrop="slotDrop(event,${i})"
+    onclick="pickSlotUpload(${i})">
+    <div class="empty"><span>＋</span>${isMain?'Main photo':'Add photo'}</div>
+    ${sizeBadge}
+  </div>`;
+}
+function paintEditModal(){
+  const b=document.getElementById('editModalBody');
+  const s=EDIT; const p=s.original;
+  const sizeGrid = s.hasSizes ? `
+    <div class="size-grid">
+      ${['S','M','L'].map(k=>`
+        <div class="size-card ${(s.sizePrices[k]!==''||s.photos[k==='S'?0:k==='M'?1:2])?'active':''}">
+          <h4>${SIZE_LABELS[k].en} · <span class="lbl-ar" dir="rtl">${SIZE_LABELS[k].ar}</span></h4>
+          <input type="number" step="0.5" min="0" placeholder="Price (USD)" value="${esc(s.sizePrices[k])}" oninput="EDIT.sizePrices['${k}']=this.value; EDIT.dirty=true">
+          <div class="hint">Photo in slot ${k==='S'?1:k==='M'?2:3} · leave blank if not offered</div>
+        </div>`).join('')}
+    </div>` : '';
+  b.innerHTML=`
+    <div class="edit-section">
+      <h3>Photos <span class="muted" style="font-weight:400;text-transform:none;letter-spacing:0">— up to 5</span></h3>
+      <div class="slot-row">${[0,1,2,3,4].map(renderPhotoSlot).join('')}</div>
+      <input type="file" id="slotUpload" accept="image/*" style="display:none">
+      <p class="muted" style="font-size:.72rem;margin-top:6px">
+        ${s.hasSizes?'Slots 1–3 are the Small / Medium / Large photos and swap on the storefront when a customer picks a size. Slots 4–5 are shared gallery angles.':'Slot 1 is the main image on cards and the coin. Slots 2–5 open in the lightbox as extra angles. Drag to reorder.'}
+      </p>
+    </div>
+
+    <div class="edit-section">
+      <h3>Sizes</h3>
+      ${s.isReal?`<div class="real-variant-notice"><b>This product belongs to the variant family <code>${esc(p.variant_group)}</code>.</b> Its sizes are separate products — edit each sibling row in the product list to change its price. The quick-sizes toggle is disabled here so the family isn't broken.</div>`:''}
+      <div class="size-toggle">
+        <div class="size-toggle-info">
+          <b>Offer sizes (S / M / L)</b>
+          <div class="muted">Turn on to sell Small, Medium and Large versions with their own price and photo. Slot 1 → Small, Slot 2 → Medium, Slot 3 → Large.</div>
+        </div>
+        <label class="size-switch">
+          <input type="checkbox" id="sizeToggle" ${s.hasSizes?'checked':''} ${s.isReal?'disabled':''} onchange="onSizeToggle(this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+      ${sizeGrid}
+    </div>
+
+    <div class="edit-section">
+      <h3>Details</h3>
+      <div class="fgrid">
+        <div class="fg"><label>Name (English)</label><input id="eEn" value="${esc(s.en)}" oninput="EDIT.en=this.value;EDIT.dirty=true"></div>
+        <div class="fg"><label>Name (Arabic)</label><input id="eAr" dir="rtl" value="${esc(s.ar)}" oninput="EDIT.ar=this.value;EDIT.dirty=true"></div>
+        <div class="fg full"><label>Description (English) <span class="muted" id="ctEn" style="float:right">${s.descEn.length}/${DESC_MAX}</span></label>
+          <textarea id="eDescEn" rows="3" maxlength="${DESC_MAX}" style="width:100%;padding:11px 13px;border:1.5px solid var(--blush-2);border-radius:10px;font-size:.9rem;background:#FDFBFC;font-family:inherit;resize:vertical" placeholder="What makes this piece special? (Optional)" oninput="EDIT.descEn=this.value;EDIT.dirty=true;document.getElementById('ctEn').textContent=this.value.length+'/${DESC_MAX}'">${esc(s.descEn)}</textarea>
+        </div>
+        <div class="fg full"><label>Description (Arabic) <span class="muted" id="ctAr" style="float:right">${s.descAr.length}/${DESC_MAX}</span></label>
+          <textarea id="eDescAr" rows="3" dir="rtl" maxlength="${DESC_MAX}" style="width:100%;padding:11px 13px;border:1.5px solid var(--blush-2);border-radius:10px;font-size:.9rem;background:#FDFBFC;font-family:inherit;resize:vertical" placeholder="ما الذي يميّز هذه القطعة؟ (اختياري)" oninput="EDIT.descAr=this.value;EDIT.dirty=true;document.getElementById('ctAr').textContent=this.value.length+'/${DESC_MAX}'">${esc(s.descAr)}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="edit-section">
+      <h3>${s.hasSizes?'Base price (Small)':'Price'} & code</h3>
+      <div class="fgrid">
+        ${s.hasSizes?'':`<div class="fg"><label>Retail Price (USD)</label><input id="ePrice" type="number" step="0.5" min="0" placeholder="blank = Contact for price" value="${esc(s.price)}" oninput="EDIT.price=this.value;EDIT.sizePrices.S=this.value;EDIT.dirty=true"></div>`}
+        <div class="fg"><label>Cost (USD) — internal</label><input id="eCost" type="number" step="0.01" min="0" value="${esc(s.cost)}" oninput="EDIT.cost=this.value;EDIT.dirty=true"></div>
+        <div class="fg"><label>SKU / Code</label><input id="eSku" dir="ltr" value="${esc(s.sku)}" oninput="EDIT.sku=this.value;EDIT.dirty=true"></div>
+        <div class="fg"><label>Barcode</label><input id="eBar" dir="ltr" value="${esc(s.barcode)}" oninput="EDIT.barcode=this.value;EDIT.dirty=true"></div>
+        <div class="fg"><label>Category</label><select id="eCat" onchange="EDIT.category=this.value;EDIT.dirty=true">${categories.map(c=>`<option value="${c.id}" ${s.category===c.id?'selected':''}>${c.en}</option>`).join('')}</select></div>
+        <div class="fg"><label>Best seller</label><select id="eBest" onchange="EDIT.best=!!this.value;EDIT.dirty=true"><option value="">No</option><option value="1" ${s.best?'selected':''}>Yes</option></select></div>
+      </div>
+    </div>
+  `;
+  const inp=document.getElementById('slotUpload');
+  if(inp){
+    inp.onchange=async e=>{
+      const files=[...(e.target.files||[])].filter(f=>/^image\//.test(f.type));
+      if(files.length && editSlotIx>=0) await handleSlotFile(files[0], editSlotIx);
+      inp.value=''; editSlotIx=-1;
+    };
+  }
+}
+function onSizeToggle(on){
+  if(!EDIT) return;
+  if(EDIT.isReal){ return; }
+  if(!on && EDIT.initialHasSizes){
+    if(!confirm('Turning sizes off will DELETE the Medium and Large product rows in the database and discard their prices. Continue?')) {
+      document.getElementById('sizeToggle').checked = true;
+      return;
+    }
+  }
+  EDIT.hasSizes = on;
+  EDIT.dirty = true;
+  if(on){
+    // Initialise size prices: Small = current price (base price)
+    if(EDIT.sizePrices.S==='') EDIT.sizePrices.S = EDIT.price;
+  }
+  paintEditModal();
+}
+function pickSlotUpload(i){
+  editSlotIx=i;
+  document.getElementById('slotUpload').click();
+}
+async function handleSlotFile(file, ix){
+  if(DEMO){ setEditStatus('Uploads need Supabase live mode','err'); return; }
+  setEditStatus(`Uploading photo ${ix+1}…`,'');
+  try{
+    const url=await uploadProductImage(file, EDIT.sku||'unknown');
+    EDIT.photos[ix]=url; EDIT.dirty=true;
+    paintEditModal();
+    setEditStatus(`Photo ${ix+1} uploaded — not saved yet`,'');
+  }catch(err){
+    setEditStatus('Upload failed: '+(err.message||err),'err');
+  }
+}
+function removeSlot(i){
+  EDIT.photos.splice(i,1);
+  // shift down; slot count stays 5
+  paintEditModal();
+  EDIT.dirty=true;
+}
+function slotDragStart(e,i){ editSlotDragIx=i; e.dataTransfer.effectAllowed='move'; e.currentTarget.classList.add('dragging'); }
+function slotDragOver(e,i){
+  if(editSlotDragIx===-1||editSlotDragIx===i) return;
+  e.preventDefault();
+  e.currentTarget.classList.add('drop-target');
+}
+function slotDragLeave(e){ e.currentTarget.classList.remove('drop-target'); }
+function slotDrop(e,i){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drop-target');
+  if(editSlotDragIx===-1||editSlotDragIx===i){ editSlotDragIx=-1; return; }
+  const item=EDIT.photos.splice(editSlotDragIx,1)[0];
+  EDIT.photos.splice(i,0,item);
+  EDIT.photos = EDIT.photos.slice(0,5);
+  editSlotDragIx=-1;
+  EDIT.dirty=true;
+  paintEditModal();
+}
+function slotDragEnd(){
+  document.querySelectorAll('.pslot').forEach(el=>el.classList.remove('dragging','drop-target'));
+  editSlotDragIx=-1;
+}
+
+async function saveEditModal(){
+  if(!EDIT || EDIT.saving) return;
+  EDIT.saving=true;
+  setEditStatus('Saving…','');
+  try{
+    const s=EDIT; const p=s.original;
+    if(!s.en.trim()){ setEditStatus('Name (English) is required','err'); EDIT.saving=false; return; }
+    if(s.hasSizes){
+      const anyPrice = ['S','M','L'].some(k=>s.sizePrices[k]!==''&&s.sizePrices[k]!=null);
+      if(!anyPrice){ setEditStatus('Fill at least one size price','err'); EDIT.saving=false; return; }
+    }
+    // Primary row payload
+    const primaryImages = s.hasSizes
+      ? [s.photos[0]].concat(s.photos.slice(3)).filter(Boolean)   // slot1 (Small) + slots 4/5 shared
+      : s.photos.filter(Boolean);
+    const parsePrice = v => (v===''||v==null) ? null : (isNaN(+v) ? null : +v);
+    const cost = parsePrice(s.cost);
+    const primaryPayload={
+      en:s.en.trim(), ar:s.ar.trim()||null,
+      description_en: s.descEn||null, description_ar: s.descAr||null,
+      sku:s.sku||null, barcode:s.barcode||null,
+      category:s.category, best:s.best, icon:s.icon,
+      cost_usd:cost,
+      images: primaryImages,
+      price: s.hasSizes ? parsePrice(s.sizePrices.S) : parsePrice(s.price),
+      variant_group: s.hasSizes ? (s.isReal ? p.variant_group : ('sz-'+(s.sku||p.sku||p.id))) : null,
+      variant_label_en: s.hasSizes ? (s.isReal ? p.variant_label_en : SIZE_LABELS.S.en) : null,
+      variant_label_ar: s.hasSizes ? (s.isReal ? p.variant_label_ar : SIZE_LABELS.S.ar) : null,
+      variant_order: s.hasSizes ? (s.isReal ? p.variant_order : 1) : null
+    };
+    if(DEMO){
+      Object.assign(p, primaryPayload);
+      setEditStatus('Saved ✓ (demo)','saved');
+      EDIT.dirty=false; EDIT.saving=false;
+      setTimeout(()=>closeEditModal(true),700);
+      return;
+    }
+    // 1) Update primary
+    {
+      const {error}=await sb.from('products').update(primaryPayload).eq('id',p.id);
+      if(error) throw error;
+    }
+    // 2) Handle quick-size children if not a real family
+    if(!s.isReal){
+      const groupTag = primaryPayload.variant_group;
+      const existingChildren=PRODUCTS.filter(x=>x.variant_group===p.variant_group && x.id!==p.id);
+      const existingBySize={};
+      existingChildren.forEach(c=>{
+        const key = c.variant_order===2 ? 'M' : c.variant_order===3 ? 'L' : null;
+        if(key) existingBySize[key]=c;
+      });
+      const targetSizes = s.hasSizes ? ['M','L'] : [];
+      // Sizes disabled -> delete all children
+      if(!s.hasSizes){
+        for(const c of existingChildren){
+          const {error}=await sb.from('products').delete().eq('id',c.id);
+          if(error) throw error;
+        }
+      } else {
+        for(const key of targetSizes){
+          const price = parsePrice(s.sizePrices[key]);
+          const img = s.photos[key==='M'?1:2] || null;
+          const childImages = img ? [img] : [];
+          const childSku = (s.sku||p.sku||('P'+p.id))+'-'+key;
+          const childBarcode = s.barcode ? s.barcode + '-' + key : null;
+          const childPayload = {
+            en: s.en.trim() + ' — ' + SIZE_LABELS[key].en,
+            ar: (s.ar.trim()||s.en.trim()) + ' — ' + SIZE_LABELS[key].ar,
+            description_en: s.descEn||null, description_ar: s.descAr||null,
+            sku: childSku,
+            barcode: childBarcode,
+            category: s.category, best: false, icon: s.icon,
+            cost_usd: cost,
+            images: childImages,
+            price,
+            variant_group: groupTag,
+            variant_label_en: SIZE_LABELS[key].en,
+            variant_label_ar: SIZE_LABELS[key].ar,
+            variant_order: key==='M'?2:3
+          };
+          if(existingBySize[key]){
+            const {error}=await sb.from('products').update(childPayload).eq('id',existingBySize[key].id);
+            if(error) throw error;
+          } else if(price!=null || img){
+            const {error}=await sb.from('products').insert(childPayload);
+            if(error) throw error;
+          }
+          // If price+img both empty and no existing → skip creation
+        }
+      }
+    }
+    setEditStatus('Saved ✓','saved');
+    EDIT.dirty=false; EDIT.saving=false;
+    await loadAll();
+    setTimeout(()=>closeEditModal(true),600);
+  }catch(err){
+    console.error('save failed:',err);
+    setEditStatus('Save failed: '+(err.message||err),'err');
+    EDIT.saving=false;
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && EDIT){ closeEditModal(); }
+});
+
+/* Quick pricing inline save — Price / Cost / Description EN / Description AR
+   editable directly in the products list. Blur (or Enter) writes to Supabase
+   with an optimistic local update; on failure we revert and toast. */
+async function quickSaveField(id, field, val, el){
+  const p = PRODUCTS.find(x=>x.id===id); if(!p) return;
+  const dbCol = field;
+  const uiKey = field==='cost_usd' ? 'cost_usd' : field==='description_en' ? 'description_en' : field==='description_ar' ? 'description_ar' : 'price';
+  let payloadVal;
+  if(field==='price' || field==='cost_usd'){
+    payloadVal = (val==='' || val==null) ? null : parseFloat(val);
+    if(payloadVal!==null && isNaN(payloadVal)){
+      toast('Invalid number'); el.value = p[uiKey]!=null ? p[uiKey] : ''; return;
+    }
+  } else {
+    payloadVal = String(val||'').trim() || null;
+  }
+  // No-op if unchanged
+  const current = p[uiKey] == null ? '' : String(p[uiKey]);
+  const proposed = payloadVal == null ? '' : String(payloadVal);
+  if(current === proposed) return;
+  const originalBorder = el.style.borderColor;
+  el.style.borderColor = 'var(--gold)';
+  try{
+    if(DEMO){ p[uiKey] = payloadVal; }
+    else {
+      const patch = {}; patch[dbCol] = payloadVal;
+      const {error} = await sb.from('products').update(patch).eq('id', id);
+      if(error) throw error;
+      p[uiKey] = payloadVal;
+    }
+    el.style.borderColor = '#22C55E';
+    setTimeout(()=>{ el.style.borderColor = originalBorder; }, 900);
+  }catch(err){
+    console.error('quick save failed',err);
+    toast('Save failed: '+(err.message||err));
+    el.value = p[uiKey]!=null ? p[uiKey] : '';
+    el.style.borderColor = 'var(--bad)';
+    setTimeout(()=>{ el.style.borderColor = originalBorder; }, 1400);
+  }
+}
 
 (async function(){
   if(sb){const {data}=await sb.auth.getSession();SESSION=data.session||null;}

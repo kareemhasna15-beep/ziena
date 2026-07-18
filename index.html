@@ -265,6 +265,7 @@ html[dir="rtl"] .pd-variants-label{letter-spacing:0}
 .pd-info .ar2{color:var(--ink-soft);margin-top:4px;font-size:1.05rem}
 .pd-info .cat-link{display:inline-block;margin-top:12px;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;cursor:pointer}
 html[dir="rtl"] .pd-info .cat-link{letter-spacing:0}
+.pd-desc{margin:14px 0 6px;color:var(--ink);font-size:.98rem;line-height:1.65;white-space:pre-wrap;max-width:52ch}
 .pd-price{font-size:1.9rem;font-weight:600;color:var(--magenta);margin:20px 0 8px;font-family:'Cormorant Garamond',serif}
 html[dir="rtl"] .pd-price{font-family:'Tajawal',sans-serif}
 .qty{display:inline-flex;align-items:center;border:1.5px solid var(--blush-2);border-radius:999px;overflow:hidden;vertical-align:middle}
@@ -849,6 +850,7 @@ function rowToProduct(r){
   return {
     id:r.id, sku:r.sku||'', barcode:r.barcode||'',
     en:r.en, ar:r.ar, c:r.category, sub:r.sub_category||'',
+    descEn:r.description_en||'', descAr:r.description_ar||'',
     p:(r.price==null||r.price==='')?null:+r.price,
     i:r.icon||'mug', g:r.gradient||'g1',
     best:!!r.best, top:!!r.top_seller,
@@ -859,6 +861,7 @@ function rowToProduct(r){
     variantOrder:r.variant_order==null?null:+r.variant_order
   };
 }
+const pdesc=p=>LANG==='ar'?(p.descAr||''):(p.descEn||'');
 
 /* Sub-category display names. Fall back to raw value if a new one appears. */
 const CAT_NAMES={
@@ -1283,6 +1286,7 @@ function renderProductPage(id){
         <h1>${esc(pname(p))}</h1>
         <div class="ar2" dir="${LANG==='en'?'rtl':'ltr'}" style="text-align:start">${esc(LANG==='en'?(p.ar||''):p.en)}</div>
         <span class="cat-link" onclick="FILTER='${p.c}';go('home','catalog');renderChips();renderProducts()">${cname(p.c)}</span>
+        ${pdesc(p) ? `<p class="pd-desc" dir="${LANG==='ar'?'rtl':'ltr'}">${esc(pdesc(p))}</p>` : ''}
         ${pillsHtml}
         <div class="pd-price" id="pdPrice">${fmtPrice(initialVariant?initialVariant.p:p.p)}</div>
         <div class="pd-row" id="pdRow">${pdCtaHtml(hasVariants?initialVariant:p)}</div>
