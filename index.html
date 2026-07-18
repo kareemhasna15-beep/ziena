@@ -2493,7 +2493,41 @@ function initSplash(){
     pendingY = e.clientY;                             // no style writes here
     if(e.cancelable) e.preventDefault();
   };
-  const onUp=e=>{ if(!dragging) return; endDrag(false); };
+  /* Flush the current pointer Y into dy/vy synchronously so a fast flick
+     (where pointerup fires before the next rAF tick) still has fresh state
+     to decide dismiss-vs-springback against. */
+  const flushToRelease=cy=>{
+    if(axis===null){
+      const dyt = cy - startY;
+      if(Math.abs(dyt) > 6) axis = dyt < 0 ? 'up' : 'down';
+    }
+    if(axis==='down' || axis===null){
+      return axis==='down' ? 'down' : 'tap';
+    }
+    dy = cy - startY;
+    if(dy > 0) dy *= 0.35;
+    const now = performance.now();
+    const dt = Math.max(now - lastT, 1);
+    vy = (cy - lastY) / dt;
+    lastY = cy; lastT = now;
+    return 'move';
+  };
+  const onUp=e=>{
+    if(!dragging) return;
+    const outcome = flushToRelease(e.clientY);
+    if(outcome === 'tap'){
+      /* Below-threshold tap — do nothing here; the browser's synthesized
+         click event will fire onClick and dismiss the splash. */
+      dragging=false;
+      if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
+      try{ if(activePointer!=null) el.releasePointerCapture(activePointer); }catch(_){}
+      activePointer=null;
+      el.classList.remove('dragging');
+      return;
+    }
+    if(outcome === 'down'){ endDrag(true); return; }
+    endDrag(false);
+  };
   const onCancel=e=>{ if(!dragging) return; endDrag(true); };
 
   const onWheel=e=>{ if(reduced||dismissing) return; if(e.deltaY!==0) dismiss(); };
