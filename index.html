@@ -398,9 +398,9 @@ html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95r
   .splash-logo{max-width:78vw}
   .splash-hint{margin-top:32px;font-size:.78rem}
 }
-.wa-float{position:fixed;bottom:24px;inset-inline-end:24px;z-index:60;width:56px;height:56px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.25);transition:.25s}
-.wa-float:hover{transform:scale(1.08)}
-.wa-float svg{width:28px;height:28px;fill:#fff}
+.wa-btn{background:#25D366;border:none;color:#fff;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(37,211,102,.36);transition:.25s;flex-shrink:0;text-decoration:none}
+.wa-btn:hover{background:#1DAE55;transform:translateY(-1px)}
+.wa-btn svg{width:22px;height:22px;fill:#fff}
 
 @media(max-width:960px){
   .nav-links{position:fixed;inset:80px 0 auto 0;background:#fff;flex-direction:column;gap:0;padding:10px 0;border-bottom:1px solid var(--blush-2);display:none;z-index:49}
@@ -435,8 +435,11 @@ html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95r
   .cart-btn svg{width:17px;height:17px}
   .logo .script{font-size:1.6rem}
   .logo .sub{font-size:.5rem;letter-spacing:.22em}
-  .wa-float{width:48px;height:48px;bottom:18px;inset-inline-end:18px}
-  .wa-float svg{width:24px;height:24px}
+  .wa-btn{width:38px;height:38px;box-shadow:0 4px 12px rgba(37,211,102,.32)}
+  .wa-btn svg{width:19px;height:19px}
+  .search-btn{width:38px;height:38px}
+  .search-btn svg{width:17px;height:17px}
+  .nav-right{gap:4px}
 }
 </style>
 </head>
@@ -469,6 +472,9 @@ html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95r
       <button class="search-btn" id="searchBtn" onclick="openSearch()" aria-label="Search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
       </button>
+      <a class="wa-btn" id="waBtn" target="_blank" rel="noopener" aria-label="WhatsApp">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C9.4 3 4 8.3 4 14.9c0 2.6.9 5 2.3 7L4 29l7.3-2.3c1.9 1 4 1.6 6.2 1.6 6.6 0 12-5.3 12-11.9S22.6 3 16 3zm5.9 16.9c-.3.8-1.5 1.5-2.4 1.7-.6.1-1.4.2-4.2-.9-3.5-1.5-5.8-5-6-5.3-.2-.2-1.4-1.9-1.4-3.6s.9-2.6 1.2-2.9c.3-.3.7-.4 1-.4h.7c.2 0 .5-.1.8.6.3.8 1 2.6 1.1 2.8.1.2.2.4 0 .7-.1.3-.2.4-.4.7l-.6.7c-.2.2-.4.4-.2.8.2.4 1 1.7 2.2 2.7 1.5 1.3 2.8 1.8 3.2 2 .4.2.6.1.9-.1.2-.3 1-1.2 1.3-1.6.3-.4.5-.3.9-.2.4.1 2.4 1.1 2.8 1.3.4.2.7.3.8.5.1.1.1.9-.2 1.5z"/></svg>
+      </a>
       <button class="cart-btn" onclick="toggleCart(true)" aria-label="Cart">
         <svg viewBox="0 0 24 24"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>
         <span class="cart-count" id="cartCount">0</span>
@@ -533,7 +539,7 @@ html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95r
         <p data-t="conP"></p>
         <a class="btn btn-primary" id="waContact" target="_blank" rel="noopener" data-t="conBtn"></a>
         <div style="margin-top:22px;font-size:.92rem;color:var(--ink-soft)">
-          <b data-t="conPhone" style="color:var(--plum)"></b> <bdo dir="ltr">+961 70 999 828</bdo>
+          <b data-t="conPhone" style="color:var(--plum)"></b> <bdo dir="ltr">+961 81 830 202</bdo>
         </div>
       </div>
     </div>
@@ -572,6 +578,7 @@ html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95r
   </div>
 </aside>
 
+<!-- Floating WhatsApp bubble removed: the WA action lives in the header now for better reach on both mobile and desktop -->
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true">
   <button class="lb-close" id="lbClose" aria-label="Close" type="button">×</button>
   <button class="lb-nav prev" id="lbPrev" aria-label="Previous" type="button">‹</button>
@@ -580,10 +587,6 @@ html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95r
   <div class="lb-dots" id="lbDots"></div>
   <div class="lb-counter" id="lbCounter" dir="ltr"></div>
 </div>
-
-<a class="wa-float" id="waFloat" target="_blank" rel="noopener" aria-label="WhatsApp">
-  <svg viewBox="0 0 32 32"><path d="M16 3C9.4 3 4 8.3 4 14.9c0 2.6.9 5 2.3 7L4 29l7.3-2.3c1.9 1 4 1.6 6.2 1.6 6.6 0 12-5.3 12-11.9S22.6 3 16 3zm5.9 16.9c-.3.8-1.5 1.5-2.4 1.7-.6.1-1.4.2-4.2-.9-3.5-1.5-5.8-5-6-5.3-.2-.2-1.4-1.9-1.4-3.6s.9-2.6 1.2-2.9c.3-.3.7-.4 1-.4h.7c.2 0 .5-.1.8.6.3.8 1 2.6 1.1 2.8.1.2.2.4 0 .7-.1.3-.2.4-.4.7l-.6.7c-.2.2-.4.4-.2.8.2.4 1 1.7 2.2 2.7 1.5 1.3 2.8 1.8 3.2 2 .4.2.6.1.9-.1.2-.3 1-1.2 1.3-1.6.3-.4.5-.3.9-.2.4.1 2.4 1.1 2.8 1.3.4.2.7.3.8.5.1.1.1.9-.2 1.5z"/></svg>
-</a>
 
 <div class="toast" id="toast"></div>
 
@@ -599,7 +602,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const PRICE_MULTIPLIER = 1;        // 1.5 = +50% markup on all base prices
 const LBP_RATE  = 89500;           // Lira per 1 USD
-const WA_NUMBER = '96170999828';   // store WhatsApp number
+const WA_NUMBER = '96181830202';   // store WhatsApp number (Lebanon +961 81 830 202)
 /* ═══════════════════════════════════════════════════════════════ */
 
 const sb = (SUPABASE_URL && SUPABASE_ANON_KEY)
@@ -964,7 +967,9 @@ function renderStatic(){
   document.getElementById('aboutTitle').innerHTML=t('aboutTitle');
   const wa='https://wa.me/'+WA_NUMBER;
   document.getElementById('waContact').href=wa;
-  document.getElementById('waFloat').href=wa;
+  const waAskTxt = LANG==='ar' ? 'مرحباً زينة! أودّ الاستفسار عن منتج' : "Hi Zeina! I'd like to ask about a product";
+  const waBtn=document.getElementById('waBtn');
+  if(waBtn) waBtn.href = wa + '?text=' + encodeURIComponent(waAskTxt);
 }
 function renderBest(){
   const vis=visibleDB();
