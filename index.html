@@ -233,6 +233,15 @@ html[dir="rtl"] .bs-rank{letter-spacing:0}
 .prod-art img{width:100%;height:100%;object-fit:cover}
 .tag-best{position:absolute;top:10px;inset-inline-end:10px;background:var(--gold);color:#fff;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600;padding:4px 10px;border-radius:999px;z-index:2}
 html[dir="rtl"] .tag-best{letter-spacing:0}
+/* Discount ribbon — magenta with gold text, sits on the top-inline-start corner
+   so it can co-exist with .tag-best (which sits on the top-inline-end). */
+.tag-disc{position:absolute;top:10px;inset-inline-start:10px;background:var(--magenta);color:var(--gold);font-size:.72rem;font-weight:800;padding:5px 10px;border-radius:8px;z-index:3;box-shadow:0 4px 12px rgba(140,13,84,.25);letter-spacing:.02em;font-family:'Jost','Tajawal',sans-serif}
+html[dir="rtl"] .tag-disc{font-family:'Tajawal',sans-serif}
+.price-disc{display:inline-flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.price-disc .p-now{color:var(--magenta);font-weight:700}
+.price-disc .p-was{color:var(--ink-soft);opacity:.75;font-weight:500;font-size:.88em}
+.pd-price.pd-price-disc{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.pd-price .p-was{font-size:.55em;color:var(--ink-soft);text-decoration:line-through;opacity:.65;font-weight:500}
 .prod-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:4px;flex:1}
 .prod-body h3{font-size:1.02rem;color:var(--plum);line-height:1.3;cursor:pointer;overflow-wrap:break-word}
 .prod-body h3:hover{color:var(--magenta)}
@@ -1077,6 +1086,8 @@ function rowToProduct(r){
     en:r.en, ar:r.ar, c:r.category, sub:r.sub_category||'',
     descEn:r.description_en||'', descAr:r.description_ar||'',
     p:(r.price==null||r.price==='')?null:+r.price,
+    discPct:(r.discount_percent==null||r.discount_percent==='')?null:+r.discount_percent,
+    discEnds:r.discount_ends_at||null,
     i:r.icon||'mug', g:r.gradient||'g1',
     best:!!r.best, top:!!r.top_seller,
     images, img:images[0]||'',
@@ -1085,6 +1096,46 @@ function rowToProduct(r){
     variantLabelAr:r.variant_label_ar||null,
     variantOrder:r.variant_order==null?null:+r.variant_order
   };
+}
+
+/* ── Discount helpers ── */
+function activeDiscount(p){
+  if(!p) return 0;
+  const pct = +p.discPct;
+  if(!pct || pct <= 0) return 0;
+  if(p.discEnds){
+    const ends = new Date(p.discEnds);
+    if(isFinite(ends.getTime()) && ends.getTime() <= Date.now()) return 0;
+  }
+  return Math.min(90, pct);
+}
+function effectivePrice(p){
+  if(!p || p.p==null) return null;
+  const d = activeDiscount(p);
+  if(d <= 0) return +p.p;
+  return +(+p.p * (1 - d/100)).toFixed(2);
+}
+const AR_DIGITS = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+const arDigits = s => String(s).replace(/[0-9]/g, d => AR_DIGITS[+d]);
+function fmtDiscBadge(pct){
+  const n = Math.round(pct);
+  return LANG==='ar' ? '‎−' + arDigits(n) + '٪' : '−' + n + '%';
+}
+function priceBlockHtml(p){
+  if(!hasPrice(p&&p.p)) return `<span class="price price-ask">${t('contactPrice')}</span>`;
+  const d = activeDiscount(p);
+  if(d > 0){
+    const eff = effectivePrice(p);
+    /* Show discounted price (magenta), original strikethrough alongside. Format
+       both via fmtPrice() so currency toggle is respected. */
+    return `<span class="price price-disc"><span class="p-now">${fmtPrice(eff)}</span> <s class="p-was">${fmtPrice(p.p)}</s></span>`;
+  }
+  return `<span class="price">${fmtPrice(p.p)}</span>`;
+}
+function discRibbonHtml(p){
+  const d = activeDiscount(p);
+  if(d <= 0) return '';
+  return `<span class="tag-disc" aria-label="${LANG==='ar'?'خصم':'discount'}">${fmtDiscBadge(d)}</span>`;
 }
 const pdesc=p=>LANG==='ar'?(p.descAr||''):(p.descEn||'');
 
@@ -1204,7 +1255,19 @@ function addToCart(id,qty=1,btn){
 }
 function setQty(id,q){ if(q<=0)delete cart[id];else cart[id]=q; saveCart();renderCartBadge();renderDrawer(); if(VIEW==='checkout')renderCheckout(); }
 function cartCount(){return Object.values(cart).reduce((a,b)=>a+b,0)}
-function cartTotal(){return Object.entries(cart).reduce((s,[id,q])=>{const p=byId(id);return (p&&hasPrice(p.p))?s+priceVal(+p.p)*q:s},0)}
+/* Cart total = sum of effective (discounted) priced lines. Falls back to
+   the original price when no discount is active. TBD lines are skipped. */
+function cartTotal(){return Object.entries(cart).reduce((s,[id,q])=>{
+  const p=byId(id);
+  if(!p || !hasPrice(p.p)) return s;
+  const eff = effectivePrice(p);
+  const unit = eff!=null ? eff : +p.p;
+  return s + priceVal(+unit) * q;
+},0)}
+function cartOriginalTotal(){return Object.entries(cart).reduce((s,[id,q])=>{
+  const p=byId(id);
+  return (p && hasPrice(p.p)) ? s + priceVal(+p.p) * q : s;
+},0)}
 function renderCartBadge(){document.getElementById('cartCount').textContent=cartCount()}
 function toggleCart(open){
   document.getElementById('drawer').classList.toggle('open',open);
@@ -1249,12 +1312,12 @@ const addBtn=id=>{
 const prodCard=p=>`
   <div class="prod" data-c="${p.c}">
     <div class="prod-art ${p.g}" onclick="go('product',${p.id})">
-      ${p.best?`<span class="tag-best">${t('best')}</span>`:''}
+      ${p.best?`<span class="tag-best">${t('best')}</span>`:''}${discRibbonHtml(p)}
       ${artInner(p)}
     </div>
     <div class="prod-body">
       <h3 onclick="go('product',${p.id})">${esc(pname(p))}</h3>
-      <span class="price">${fmtPrice(p.p)}</span>
+      ${priceBlockHtml(p)}
       <div class="actions">${addBtn(p.id)}</div>
     </div>
   </div>`;
@@ -1289,11 +1352,12 @@ function renderBest(){
     <div class="bs-card" data-pid="${p.id}">
       <div class="bs-art ${p.g}">
         <span class="bs-rank" ${p.top?'':'style="background:var(--gold)"'}>${p.top?t('top'):t('best')}</span>
+        ${discRibbonHtml(p)}
         ${artInner(p)}
       </div>
       <div class="bs-body">
         <h3>${esc(pname(p))}</h3>
-        <span class="price">${fmtPrice(p.p)}</span>
+        ${priceBlockHtml(p)}
         ${addBtn(p.id)}
       </div>
     </div>`;
@@ -1473,12 +1537,12 @@ function prodCardHighlight(p,q){
   return `
   <div class="prod" data-c="${p.c}">
     <div class="prod-art ${p.g}" onclick="go('product',${p.id})">
-      ${p.best?`<span class="tag-best">${t('best')}</span>`:''}
+      ${p.best?`<span class="tag-best">${t('best')}</span>`:''}${discRibbonHtml(p)}
       ${artInner(p)}
     </div>
     <div class="prod-body">
       <h3 onclick="go('product',${p.id})">${highlight(pname(p),q)}</h3>
-      <span class="price">${fmtPrice(p.p)}</span>
+      ${priceBlockHtml(p)}
       <div class="actions">${addBtn(p.id)}</div>
     </div>
   </div>`;
@@ -1517,7 +1581,7 @@ function renderProductPage(id){
         <span class="cat-link" onclick="FILTER='${p.c}';go('home','catalog');renderChips();renderProducts()">${cname(p.c)}</span>
         ${pdesc(p) ? `<p class="pd-desc" dir="${LANG==='ar'?'rtl':'ltr'}">${esc(pdesc(p))}</p>` : ''}
         ${pillsHtml}
-        <div class="pd-price" id="pdPrice">${fmtPrice(initialVariant?initialVariant.p:p.p)}</div>
+        <div class="pd-price" id="pdPrice">${pdPriceHtml(hasVariants?initialVariant:p, p)}</div>
         <div class="pd-row" id="pdRow">${pdCtaHtml(hasVariants?initialVariant:p)}</div>
       </div>
     </div>
@@ -1529,6 +1593,19 @@ function renderProductPage(id){
 function pdQty(d){
   const el=document.getElementById('pdQty');
   el.textContent=Math.max(1,parseInt(el.textContent)+d);
+}
+/* Render the pd-price line with discount awareness. When editing a variant,
+   the target carries its own price; the primary is passed so we can inherit
+   the discount (discount lives on the primary product family). */
+function pdPriceHtml(target, primary){
+  if(!hasPrice(target && target.p)) return `<span class="price price-ask">${t('contactPrice')}</span>`;
+  const discSource = primary || target;
+  const d = activeDiscount(discSource);
+  if(d > 0){
+    const eff = +(+target.p * (1 - d/100)).toFixed(2);
+    return `<span class="p-now">${fmtPrice(eff)}</span> <span class="p-was">${fmtPrice(target.p)}</span> <span class="tag-disc" style="position:static;font-size:.5em;vertical-align:middle">${fmtDiscBadge(d)}</span>`;
+  }
+  return fmtPrice(target.p);
 }
 function pdCtaHtml(target){
   const nm = byId(target.id) ? pname(byId(target.id)) : (target.en||'');
@@ -1544,7 +1621,7 @@ function selectVariant(primaryId,ix){
   const v=p.variants[ix]; if(!v) return;
   PD_VARIANT_IX=ix;
   document.querySelectorAll('.v-pill').forEach((el,i)=>{el.classList.toggle('on',i===ix);el.setAttribute('aria-checked',i===ix?'true':'false')});
-  document.getElementById('pdPrice').innerHTML=fmtPrice(v.p);
+  document.getElementById('pdPrice').innerHTML=pdPriceHtml(v, p);
   document.getElementById('pdRow').innerHTML=pdCtaHtml(v);
   const img=document.getElementById('pdImg');
   const wrap=document.querySelector('.pd-img-wrap');
@@ -1649,15 +1726,23 @@ async function sendOrder(){
        23502). */
   const items = entries.map(({p,q}) => {
     const priced = hasPrice(p.p);
-    return {
-      pid: p.id,
-      sku: p.sku || '',
-      name: p.en,
-      qty: q,
-      unit: priced ? +priceVal(+p.p).toFixed(2) : null,
-      line: priced ? +(priceVal(+p.p) * q).toFixed(2) : null,
-      tbd:  !priced
+    if(!priced){
+      return { pid:p.id, sku:p.sku||'', name:p.en, qty:q, unit:null, line:null, tbd:true };
+    }
+    const discPct = activeDiscount(p);
+    const eff = effectivePrice(p);
+    const origUnit = +priceVal(+p.p).toFixed(2);
+    const unit = +priceVal(+eff).toFixed(2);
+    const item = {
+      pid:p.id, sku:p.sku||'', name:p.en, qty:q,
+      unit, line: +(unit*q).toFixed(2), tbd:false
     };
+    if(discPct > 0){
+      item.original_unit = origUnit;
+      item.original_line = +(origUnit*q).toFixed(2);
+      item.discount_percent = discPct;
+    }
+    return item;
   });
 
   /* Total = sum of PRICED lines only. cartTotal() already excludes null-
@@ -1859,30 +1944,51 @@ async function sendOrderEmail(orderId, o, totalTxt, currency, extra){
     const tbdUnits    = tbdItems.reduce((s,i)=>s + (+i.qty||0), 0);
     const pricedCount = (extra && +extra.pricedCount) || pricedItems.length;
 
-    /* Plain-text items list. TBD lines show 'PRICE TBD' instead of a $ figure. */
+    const isDiscounted = i => (i && i.original_unit != null && +i.original_unit > +i.unit);
+    const discountSavedNum = pricedItems.reduce((s,i)=>{
+      if(!isDiscounted(i)) return s;
+      return s + ((+i.original_unit) - (+i.unit)) * (+i.qty||0);
+    }, 0);
+
+    /* Plain-text items list. TBD lines show 'PRICE TBD' instead of a $ figure.
+       Discounted lines show the original strike-through unit and the effective
+       unit alongside, plus the discount %. */
     const itemsPlain = items.map(i => {
       const nm = i.name + (i.sku ? ' [' + i.sku + ']' : '');
       if(isTbd(i)){
         return `  ${i.qty} × ${nm}\n     PRICE TBD · line PRICE TBD`;
       }
       const line = (+i.qty||0) * (+i.unit||0);
+      if(isDiscounted(i)){
+        return `  ${i.qty} × ${nm}\n     was ${fmtMoney(i.original_unit)} · now ${fmtMoney(i.unit)} each (-${i.discount_percent}%) · line ${fmtMoney(line)}`;
+      }
       return `  ${i.qty} × ${nm}\n     ${fmtMoney(i.unit)} each · line ${fmtMoney(line)}`;
     }).join('\n\n');
 
     /* HTML rows for the styled template. TBD lines get a gold pill in the
-       Unit/Line columns instead of a money amount. */
+       Unit/Line columns; discounted lines show the strike-through original
+       and the effective unit stacked. */
     const escHtml = s => String(s??'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     const tbdPill = '<span style="display:inline-block;background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.04em">PRICE TBD</span>';
+    const discPill = pct => '<span style="display:inline-block;background:#BA1270;color:#C29A4B;padding:1px 8px;border-radius:6px;font-size:10px;font-weight:800;margin-left:6px">-' + pct + '%</span>';
+    const unitCell = i => {
+      if(isTbd(i)) return tbdPill;
+      if(isDiscounted(i)){
+        return `<span style="color:#4A0A30;font-weight:600">${escHtml(fmtMoney(i.unit))}</span> ` +
+               `<span style="color:#7A6470;text-decoration:line-through;font-size:12px">${escHtml(fmtMoney(i.original_unit))}</span>`;
+      }
+      return escHtml(fmtMoney(i.unit));
+    };
     const itemsHtml = items.map(i => {
       const tbd = isTbd(i);
       const line = tbd ? null : (+i.qty||0) * (+i.unit||0);
       return `<tr>` +
         `<td style="padding:10px 12px 10px 0;border-bottom:1px solid #F6DFEC;vertical-align:top">` +
-          `<div style="font-weight:600;color:#4A0A30">${escHtml(i.name)}${tbd?' &nbsp;'+tbdPill:''}</div>` +
+          `<div style="font-weight:600;color:#4A0A30">${escHtml(i.name)}${tbd?' &nbsp;'+tbdPill:''}${isDiscounted(i)?discPill(i.discount_percent):''}</div>` +
           (i.sku ? `<div style="color:#7A6470;font-size:12px;font-family:Menlo,Consolas,'Courier New',monospace;margin-top:2px">${escHtml(i.sku)}</div>` : '') +
         `</td>` +
         `<td style="padding:10px 8px;border-bottom:1px solid #F6DFEC;text-align:right;white-space:nowrap;color:#7A6470;font-size:14px">×${escHtml(i.qty)}</td>` +
-        `<td style="padding:10px 8px;border-bottom:1px solid #F6DFEC;text-align:right;white-space:nowrap;color:#7A6470;font-size:14px">${tbd?tbdPill:escHtml(fmtMoney(i.unit))}</td>` +
+        `<td style="padding:10px 8px;border-bottom:1px solid #F6DFEC;text-align:right;white-space:nowrap;color:#7A6470;font-size:14px">${unitCell(i)}</td>` +
         `<td style="padding:10px 0 10px 12px;border-bottom:1px solid #F6DFEC;text-align:right;white-space:nowrap;color:#BA1270;font-weight:600">${tbd?tbdPill:escHtml(fmtMoney(line))}</td>` +
       `</tr>`;
     }).join('');
@@ -1912,6 +2018,8 @@ async function sendOrderEmail(orderId, o, totalTxt, currency, extra){
       tbd_suffix: tbdSuffix,                              // ready-to-paste next to total
       total_label: totalLabel,
       subtotal: fmtMoney(subtotalNum),
+      discount_saved: discountSavedNum > 0 ? fmtMoney(discountSavedNum) : '',
+      discount_saved_suffix: discountSavedNum > 0 ? ('· saved ' + fmtMoney(discountSavedNum) + ' via product discounts') : '',
       total: totalTxt,
       currency,
       site_name: 'Zeina — Home & Kitchen Accessories'
@@ -2164,7 +2272,7 @@ function searchCard(p,q){
   return `
     <div class="prod" data-c="${p.c}">
       <div class="prod-art ${p.g}" onclick="closeSearch();go('product',${p.id})">
-        ${p.best?`<span class="tag-best">${t('best')}</span>`:''}
+        ${p.best?`<span class="tag-best">${t('best')}</span>`:''}${discRibbonHtml(p)}
         ${artInner(p)}
       </div>
       <div class="prod-body">

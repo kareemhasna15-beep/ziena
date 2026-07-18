@@ -402,10 +402,11 @@ function render(){
       <table>
         <tr>
           <th>SKU</th><th>Name</th><th>Price</th><th>Cost</th>
+          <th>Disc %</th><th>Disc ends</th>
           <th>Description (EN)</th><th>Description (AR)</th>
           <th>Cat</th><th>Imgs</th><th>Best</th><th></th>
         </tr>
-      ${PRODUCTS.map(p=>{const n=productImages(p).length;return `<tr>
+      ${PRODUCTS.map(p=>{const n=productImages(p).length;const discEndsLocal = p.discount_ends_at ? String(p.discount_ends_at).slice(0,16) : '';return `<tr>
         <td><code style="font-size:.72rem">${esc(p.sku||'')}</code></td>
         <td style="min-width:180px">${esc(p.en)}<br><span class="muted" dir="rtl" style="display:inline-block">${esc(p.ar||'')}</span></td>
         <td><input type="number" step="0.5" min="0" value="${p.price!=null?p.price:''}" placeholder="—"
@@ -416,6 +417,13 @@ function render(){
               style="width:74px;padding:6px 8px;border:1.5px solid var(--blush-2);border-radius:8px;font-size:.82rem;background:#FDFBFC;color:var(--ink-soft)"
               onblur="quickSaveField(${p.id},'cost_usd',this.value,this)"
               onkeydown="if(event.key==='Enter')this.blur()"></td>
+        <td><input type="number" step="1" min="0" max="90" value="${p.discount_percent!=null?p.discount_percent:''}" placeholder="—"
+              style="width:64px;padding:6px 8px;border:1.5px solid var(--blush-2);border-radius:8px;font-size:.82rem;background:#FDFBFC;color:var(--magenta);font-weight:600"
+              onblur="quickSaveField(${p.id},'discount_percent',this.value,this)"
+              onkeydown="if(event.key==='Enter')this.blur()"></td>
+        <td><input type="datetime-local" value="${discEndsLocal}"
+              style="padding:6px 8px;border:1.5px solid var(--blush-2);border-radius:8px;font-size:.78rem;background:#FDFBFC"
+              onblur="quickSaveField(${p.id},'discount_ends_at',this.value,this)"></td>
         <td><textarea rows="2" placeholder="—"
               style="width:200px;padding:6px 8px;border:1.5px solid var(--blush-2);border-radius:8px;font-size:.78rem;background:#FDFBFC;font-family:inherit;resize:vertical"
               onblur="quickSaveField(${p.id},'description_en',this.value,this)">${esc(p.description_en||'')}</textarea></td>
@@ -512,8 +520,10 @@ function render(){
         <td>${esc(o.name)}<br><span class="muted">${esc(o.phone||'')}</span><br><span class="muted">${esc(o.address||'')}</span>${o.note?`<br><span class="muted">📝 ${esc(o.note)}</span>`:''}</td>
         <td>${(o.items||[]).map(i=>{
           const tbd = i.tbd===true || i.unit==null;
-          const badge = tbd ? ' <span style="display:inline-block;background:#FEF3C7;color:#92400E;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:999px;letter-spacing:.04em">TBD</span>' : '';
-          return `${i.qty} × ${esc(i.name)}${badge}`;
+          const disc = !tbd && i.original_unit!=null && +i.original_unit > +i.unit;
+          const tbdBadge = tbd ? ' <span style="display:inline-block;background:#FEF3C7;color:#92400E;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:999px;letter-spacing:.04em">TBD</span>' : '';
+          const discBadge = disc ? ' <span style="display:inline-block;background:var(--magenta);color:var(--gold);font-size:.6rem;font-weight:800;padding:1px 6px;border-radius:6px">-'+(+i.discount_percent||0)+'%</span>' : '';
+          return `${i.qty} × ${esc(i.name)}${tbdBadge}${discBadge}`;
         }).join('<br>')}${o.has_tbd_items?'<br><span class="muted" style="font-size:.72rem">(price TBD on '+((o.items||[]).filter(i=>i.tbd===true||i.unit==null).length)+' line)</span>':''}</td>
         <td><b>$${(+o.total).toFixed(2)}</b></td>
         <td><button class="status ${o.status==='new'?'st-new':o.status==='done'?'st-done':'st-cancel'}" onclick="cycleStatus(${o.id},'${o.status}')">${o.status.toUpperCase()}</button></td>
@@ -1279,6 +1289,8 @@ function openEditModal(id){
     descEn:p.description_en||'', descAr:p.description_ar||'',
     sku:p.sku||'', barcode:p.barcode||'',
     price:p.price!=null?String(p.price):'', cost:p.cost_usd!=null?String(p.cost_usd):'',
+    discPct: p.discount_percent!=null ? String(p.discount_percent) : '',
+    discEnds: p.discount_ends_at ? String(p.discount_ends_at).slice(0,16) : '',
     category:p.category||'decor', best:!!p.best, icon:p.icon||'mug',
     photos:imgs.slice(0,5),
     hasSizes:!!p.variant_group,
@@ -1413,6 +1425,8 @@ function paintEditModal(){
       <div class="fgrid">
         ${s.hasSizes?'':`<div class="fg"><label>Retail Price (USD)</label><input id="ePrice" type="number" step="0.5" min="0" placeholder="blank = Contact for price" value="${esc(s.price)}" oninput="EDIT.price=this.value;EDIT.sizePrices.S=this.value;EDIT.dirty=true"></div>`}
         <div class="fg"><label>Cost (USD) — internal</label><input id="eCost" type="number" step="0.01" min="0" value="${esc(s.cost)}" oninput="EDIT.cost=this.value;EDIT.dirty=true"></div>
+        <div class="fg"><label>Discount % <span class="muted" style="font-weight:400">(0–90, blank = none)</span></label><input id="eDiscPct" type="number" step="1" min="0" max="90" placeholder="e.g. 20" value="${esc(s.discPct)}" oninput="EDIT.discPct=this.value;EDIT.dirty=true"></div>
+        <div class="fg"><label>Discount ends <span class="muted" style="font-weight:400">(local time, blank = never)</span></label><input id="eDiscEnds" type="datetime-local" value="${esc(s.discEnds)}" oninput="EDIT.discEnds=this.value;EDIT.dirty=true"></div>
         <div class="fg"><label>SKU / Code</label><input id="eSku" dir="ltr" value="${esc(s.sku)}" oninput="EDIT.sku=this.value;EDIT.dirty=true"></div>
         <div class="fg"><label>Barcode</label><input id="eBar" dir="ltr" value="${esc(s.barcode)}" oninput="EDIT.barcode=this.value;EDIT.dirty=true"></div>
         <div class="fg"><label>Category</label><select id="eCat" onchange="EDIT.category=this.value;EDIT.dirty=true">${categories.map(c=>`<option value="${c.id}" ${s.category===c.id?'selected':''}>${c.en}</option>`).join('')}</select></div>
@@ -1508,6 +1522,12 @@ async function saveEditModal(){
       : s.photos.filter(Boolean);
     const parsePrice = v => (v===''||v==null) ? null : (isNaN(+v) ? null : +v);
     const cost = parsePrice(s.cost);
+    /* Discount fields — sent as new columns discount_percent / discount_ends_at.
+       Bounded to 0..90; blank clears the discount entirely (both fields null).
+       Local datetime-local values are converted to ISO for Postgres. */
+    const discPctRaw = parsePrice(s.discPct);
+    const discPct = (discPctRaw!=null && discPctRaw>0 && discPctRaw<=90) ? discPctRaw : null;
+    const discEndsIso = (s.discEnds && discPct!=null) ? new Date(s.discEnds).toISOString() : null;
     const primaryPayload={
       en:s.en.trim(), ar:s.ar.trim()||null,
       description_en: s.descEn||null, description_ar: s.descAr||null,
@@ -1516,6 +1536,8 @@ async function saveEditModal(){
       cost_usd:cost,
       images: primaryImages,
       price: s.hasSizes ? parsePrice(s.sizePrices.S) : parsePrice(s.price),
+      discount_percent: discPct,
+      discount_ends_at: discEndsIso,
       variant_group: s.hasSizes ? (s.isReal ? p.variant_group : ('sz-'+(s.sku||p.sku||p.id))) : null,
       variant_label_en: s.hasSizes ? (s.isReal ? p.variant_label_en : SIZE_LABELS.S.en) : null,
       variant_label_ar: s.hasSizes ? (s.isReal ? p.variant_label_ar : SIZE_LABELS.S.ar) : null,
@@ -1532,6 +1554,21 @@ async function saveEditModal(){
     {
       const {error}=await sb.from('products').update(primaryPayload).eq('id',p.id);
       if(error) throw error;
+    }
+    /* Cascade the discount to real variant siblings (Roma, EP, etc.) so the
+       storefront's per-line effective price uses the same % everywhere.
+       Only touches the two discount columns — safe. Quick-size children get
+       their discount written below when the whole child row is written. */
+    if(p.variant_group && !String(p.variant_group).startsWith('sz-')){
+      const siblingIds = PRODUCTS
+        .filter(x => x.variant_group === p.variant_group && x.id !== p.id)
+        .map(x => x.id);
+      if(siblingIds.length){
+        const {error} = await sb.from('products')
+          .update({ discount_percent: discPct, discount_ends_at: discEndsIso })
+          .in('id', siblingIds);
+        if(error) console.warn('[edit] discount cascade to siblings failed', error);
+      }
     }
     // 2) Handle quick-size children if not a real variant family.
     //    CRITICAL SAFETY GATE: only touch other rows when the product is
@@ -1581,6 +1618,8 @@ async function saveEditModal(){
             cost_usd: cost,
             images: childImages,
             price,
+            discount_percent: discPct,
+            discount_ends_at: discEndsIso,
             variant_group: groupTag,
             variant_label_en: SIZE_LABELS[key].en,
             variant_label_ar: SIZE_LABELS[key].ar,
@@ -1618,12 +1657,34 @@ document.addEventListener('keydown',e=>{
 async function quickSaveField(id, field, val, el){
   const p = PRODUCTS.find(x=>x.id===id); if(!p) return;
   const dbCol = field;
-  const uiKey = field==='cost_usd' ? 'cost_usd' : field==='description_en' ? 'description_en' : field==='description_ar' ? 'description_ar' : 'price';
+  /* All quick-editable fields keep their DB column name as the local cache key
+     so PRODUCTS[i].<col> and the Supabase row stay in sync. */
+  const uiKey = field;
   let payloadVal;
-  if(field==='price' || field==='cost_usd'){
+  if(field === 'price' || field === 'cost_usd'){
     payloadVal = (val==='' || val==null) ? null : parseFloat(val);
     if(payloadVal!==null && isNaN(payloadVal)){
       toast('Invalid number'); el.value = p[uiKey]!=null ? p[uiKey] : ''; return;
+    }
+  } else if(field === 'discount_percent'){
+    payloadVal = (val==='' || val==null) ? null : parseFloat(val);
+    if(payloadVal!==null && (isNaN(payloadVal) || payloadVal < 0 || payloadVal > 90)){
+      toast('Discount must be between 0 and 90'); el.value = p[uiKey]!=null ? p[uiKey] : ''; return;
+    }
+    /* If clearing discount %, also clear discount_ends_at so no stale end-date
+       hangs around invisibly. */
+    if(payloadVal == null && p.discount_ends_at){
+      try{ await sb.from('products').update({ discount_ends_at: null }).eq('id', id); p.discount_ends_at = null; }catch(_){}
+    }
+  } else if(field === 'discount_ends_at'){
+    /* datetime-local -> ISO for Postgres. Blank clears the end date. */
+    if(val==='' || val==null){ payloadVal = null; }
+    else {
+      const d = new Date(val);
+      if(isNaN(d.getTime())){
+        toast('Invalid date'); el.value = p[uiKey] ? String(p[uiKey]).slice(0,16) : ''; return;
+      }
+      payloadVal = d.toISOString();
     }
   } else {
     payloadVal = String(val||'').trim() || null;
