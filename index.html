@@ -1605,6 +1605,24 @@ function withTimeout(promise, ms, label){
     new Promise((_,rej)=>setTimeout(()=>rej(new Error(label||'timeout')), ms))
   ]);
 }
+
+/* Columns on the orders table that the client sends but the Supabase schema
+   may not have yet (schema-lag). If the insert fails with PGRST204 or its
+   'Could not find the "X" column' message, sendOrder strips these fields and
+   retries once so a missing migration never blocks a customer order.
+   Every future task that adds a new orders column MUST list it here. */
+const OPTIONAL_ORDER_FIELDS = ['has_tbd_items','discount_code','discount_code_amount'];
+
+/* Match against Postgrest's schema-cache error surface. Recognise:
+     - err.code === 'PGRST204'
+     - message: 'Could not find the "X" column of ...'
+   Anything else (permissions, timeouts, generic 400) is NOT a schema-lag. */
+function isSchemaLagError(err){
+  if(!err) return false;
+  if(err.code === 'PGRST204') return true;
+  const msg = String((err && err.message) || err);
+  return /could not find.*column|schema cache/i.test(msg);
+}
 async function sendOrder(){
   const name=document.getElementById('coName').value.trim();
   const phone=document.getElementById('coPhone').value.trim();
@@ -1668,10 +1686,37 @@ async function sendOrder(){
     } else {
       /* Critical path: single lightweight INSERT with a small return payload + 15s timeout.
          .select('id') keeps the response tiny. */
-      const promise=sb.from('orders').insert(orderPayload).select('id').single();
-      const {data,error}=await withTimeout(promise,15000,t('coTimeout'));
-      if(error) throw error;
-      orderId=data.id;
+      const attempt = payload => withTimeout(
+        sb.from('orders').insert(payload).select('id').single(),
+        15000, t('coTimeout')
+      );
+      let result = await attempt(orderPayload);
+      if(result.error && isSchemaLagError(result.error)){
+        /* Schema lag — the DB is behind the client. Strip the optional new
+           fields and retry once so the customer's order still lands. Log the
+           first-attempt error to admin_error_log so the admin sees which
+           migration is pending. */
+        const stripped = { ...orderPayload };
+        const droppedFields = [];
+        OPTIONAL_ORDER_FIELDS.forEach(k => {
+          if(k in stripped){ droppedFields.push(k); delete stripped[k]; }
+        });
+        console.warn('[checkout] schema-lag detected, retrying without: ' + droppedFields.join(', '), result.error);
+        logCheckoutError({
+          category: 'order_insert_retry',
+          code: String((result.error && result.error.code) || ''),
+          message: (result.error && result.error.message) || 'schema lag',
+          hint: (result.error && result.error.hint) || null,
+          details: 'stripped fields: ' + droppedFields.join(', '),
+          hasTbd: tbdCount > 0,
+          itemCount: items.length,
+          pricedCount, tbdCount, total,
+          customerName: name, customerPhone: phone
+        });
+        result = await attempt(stripped);
+      }
+      if(result.error) throw result.error;
+      orderId = result.data.id;
     }
   } catch(err){
     /* Log the REAL Supabase error to console AND to admin_error_log so the
