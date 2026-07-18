@@ -225,6 +225,9 @@ html[dir="rtl"] .drawer{transform:translateX(-100%)}
 .f-group input,.f-group textarea,.f-group select{width:100%;padding:12px 14px;border:1.5px solid var(--blush-2);border-radius:12px;font-family:inherit;font-size:.95rem;background:var(--ivory)}
 .f-group input:focus,.f-group textarea:focus,.f-group select:focus{outline:none;border-color:var(--magenta)}
 .co-summary{background:var(--blush);border-radius:14px;padding:16px 18px;margin:20px 0;font-size:.9rem}
+.btn-spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-inline-end:2px}
+.checkout-err{background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.88rem}
+.checkout-err .btn{padding:6px 14px;font-size:.78rem}
 .co-summary .line{display:flex;justify-content:space-between;padding:3px 0}
 .co-summary .tot{font-weight:700;color:var(--plum);border-top:1px solid var(--blush-2);margin-top:8px;padding-top:8px}
 
@@ -691,7 +694,8 @@ const T = {
   doneMsg:'Thank you! We will contact you shortly to confirm delivery. Payment is cash on delivery.',
   doneWa:'Also send it on WhatsApp (optional)',doneBack:'Back to shop',coFail:'Could not send the order. Please check your connection and try again.',
   waOrder:'Hello Zeina! New order:%0A',waName:'Name',waPhone:'Phone',waAddr:'Address',waNote:'Note',waTotal:'Total',
-  toastAdd:'Added to cart',toastNeed:'Please fill name, phone and address',loadFail:'Could not load products. Check your internet and refresh.'},
+  toastAdd:'Added to cart',toastNeed:'Please fill name, phone and address',loadFail:'Could not load products. Check your internet and refresh.',
+  coSending:'Placing order…',coRetry:'Try again',coTimeout:'Connection is slow. Try again?'},
  ar:{logoSub:'إكسسوارات المنزل والمطبخ',navBest:'الأكثر مبيعاً',navCats:'الأقسام',navCatalog:'المجموعة',navContact:'اتصل بنا',
   eyebrow:'لبنان',heroTitle:'جهّزي سفرتك <span class="script">بأناقة</span>',
   heroP:'أطقم سفرة فاخرة، أدوات مائدة ذهبية، أطقم قهوة وشاي، علب محارم راقية وديكور منزلي — قطع مختارة بعناية تجعل كل مناسبة مميزة.',
@@ -712,7 +716,8 @@ const T = {
   doneMsg:'شكراً لك! سنتواصل معك قريباً لتأكيد التوصيل. الدفع عند الاستلام.',
   doneWa:'أرسليه أيضاً عبر واتساب (اختياري)',doneBack:'العودة للمتجر',coFail:'تعذّر إرسال الطلب. تحققي من الاتصال وحاولي مجدداً.',
   waOrder:'مرحباً زينة! طلب جديد:%0A',waName:'الاسم',waPhone:'الهاتف',waAddr:'العنوان',waNote:'ملاحظة',waTotal:'المجموع',
-  toastAdd:'أُضيفت إلى السلة',toastNeed:'الرجاء تعبئة الاسم والهاتف والعنوان',loadFail:'تعذّر تحميل المنتجات. تحققي من الإنترنت وأعيدي التحميل.'}
+  toastAdd:'أُضيفت إلى السلة',toastNeed:'الرجاء تعبئة الاسم والهاتف والعنوان',loadFail:'تعذّر تحميل المنتجات. تحققي من الإنترنت وأعيدي التحميل.',
+  coSending:'جارٍ إرسال الطلب…',coRetry:'أعيدي المحاولة',coTimeout:'الاتصال بطيء. حاولي مجدداً؟'}
 };
 
 /* ── Icons ── */
@@ -1223,8 +1228,15 @@ function renderCheckout(){
       <div class="line tot"><span>${t('total')}</span><span>${fmtPriceTotal()}</span></div>
     </div>
     <p class="muted" style="margin-bottom:16px">${t('coHint')}</p>
+    <div id="coErr"></div>
     <button class="btn btn-primary" style="width:100%" id="coSendBtn" onclick="sendOrder()">${t('coSend')}</button>
   `;
+}
+function withTimeout(promise, ms, label){
+  return Promise.race([
+    promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error(label||'timeout')), ms))
+  ]);
 }
 async function sendOrder(){
   const name=document.getElementById('coName').value.trim();
@@ -1232,21 +1244,54 @@ async function sendOrder(){
   const addr=document.getElementById('coAddr').value.trim();
   const note=document.getElementById('coNote').value.trim();
   if(!name||!phone||!addr){toast(t('toastNeed'));return}
-  const btn=document.getElementById('coSendBtn');btn.disabled=true;
+  const btn=document.getElementById('coSendBtn');
+  if(btn.dataset.sending==='1') return;                     // guard against double-submit
+  btn.dataset.sending='1';
+  btn.disabled=true;
+  const originalLabel=btn.innerHTML;
+  btn.innerHTML=`<span class="btn-spin" aria-hidden="true"></span> ${t('coSending')}`;
+  const errBox=document.getElementById('coErr');
+  if(errBox) errBox.innerHTML='';
+
   const entries=Object.entries(cart).map(([id,q])=>({p:byId(id),q})).filter(x=>x.p);
-  const items=entries.map(({p,q})=>({pid:p.id,name:p.en,qty:q,unit:+priceVal(p.p).toFixed(2)}));
+  const items=entries.map(({p,q})=>({pid:p.id,sku:p.sku||'',name:p.en,qty:q,unit:+priceVal(p.p).toFixed(2)}));
   const total=+cartTotal().toFixed(2);
   const totalTxt=fmtPriceTotal();
+  const currency=CUR;
+  const orderPayload={name,phone,address:addr,note,items,total,status:'new'};
+
+  const t0=performance.now();
   let orderId;
-  if(DEMO){
-    orderId=++demoIdSeq;
-    demoOrders.unshift({id:orderId,created_at:new Date().toISOString(),name,phone,address:addr,note,items,total,status:'new'});
-  }else{
-    const {data,error}=await sb.from('orders').insert({name,phone,address:addr,note,items,total,status:'new'}).select().single();
-    if(error){console.error('order insert failed',error);toast(t('coFail'));btn.disabled=false;return}
-    orderId=data.id;
+  try{
+    if(DEMO){
+      orderId=++demoIdSeq;
+      demoOrders.unshift({id:orderId,created_at:new Date().toISOString(),...orderPayload});
+    } else {
+      /* Critical path: single lightweight INSERT with a small return payload + 15s timeout.
+         .select('id') keeps the response tiny (was .select() which returned the whole row incl. items jsonb). */
+      const promise=sb.from('orders').insert(orderPayload).select('id').single();
+      const {data,error}=await withTimeout(promise,15000,t('coTimeout'));
+      if(error) throw error;
+      orderId=data.id;
+    }
+  } catch(err){
+    console.error('order insert failed',err);
+    btn.disabled=false;
+    btn.dataset.sending='';
+    btn.innerHTML=originalLabel;
+    const msgTxt = (err&&err.message&&/timeout/i.test(err.message)) ? t('coTimeout') : t('coFail');
+    if(errBox){
+      errBox.innerHTML=`<div class="checkout-err">
+        <span>⚠ ${esc(msgTxt)}</span>
+        <button type="button" class="btn btn-sm btn-ghost" onclick="sendOrder()">${t('coRetry')}</button>
+      </div>`;
+    } else toast(msgTxt);
+    return;
   }
-  /* build optional WhatsApp message for the confirmation screen */
+  const perfMs=Math.round(performance.now()-t0);
+  console.log('[checkout] order insert '+perfMs+'ms');
+
+  /* Build WhatsApp confirmation message */
   let msg=t('waOrder');
   entries.forEach(({p,q})=>{msg+=`• ${q} × ${p.en} — $${(priceVal(p.p)*q).toFixed(2)}%0A`});
   msg+=`%0A${t('waTotal')}: ${totalTxt}%0A${t('waName')}: ${encodeURIComponent(name)}%0A${t('waPhone')}: ${encodeURIComponent(phone)}%0A${t('waAddr')}: ${encodeURIComponent(addr)}`;
@@ -1254,6 +1299,56 @@ async function sendOrder(){
   cart={};saveCart();renderCartBadge();
   renderOrderDone(orderId,entries,totalTxt,msg);
   window.scrollTo({top:0});
+
+  /* Fire-and-forget notifications (not in critical path) */
+  setTimeout(()=>sendOrderEmail(orderId, orderPayload, totalTxt, currency).catch(e=>console.warn('email failed',e)), 0);
+}
+
+/* EmailJS: fire-and-forget. Populate the 3 IDs below after creating the EmailJS account. */
+const EMAILJS = {
+  PUBLIC_KEY:  '',   // e.g. 'user_ABCDEF12345'
+  SERVICE_ID:  '',   // e.g. 'service_xxx'
+  TEMPLATE_ID: '',   // e.g. 'template_xxx'
+};
+let _emailjsLoaded=null;
+function loadEmailJS(){
+  if(_emailjsLoaded) return _emailjsLoaded;
+  if(!EMAILJS.PUBLIC_KEY) return Promise.reject(new Error('EmailJS not configured'));
+  _emailjsLoaded = new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+    s.async=true; s.defer=true;
+    s.onload=()=>{ try{ window.emailjs.init({publicKey:EMAILJS.PUBLIC_KEY}); resolve(); }catch(e){reject(e)} };
+    s.onerror=()=>reject(new Error('EmailJS SDK load failed'));
+    document.head.appendChild(s);
+  });
+  return _emailjsLoaded;
+}
+async function sendOrderEmail(orderId, o, totalTxt, currency){
+  if(!EMAILJS.PUBLIC_KEY || !EMAILJS.SERVICE_ID || !EMAILJS.TEMPLATE_ID) return;
+  try{
+    await loadEmailJS();
+    const itemsPlain=(o.items||[]).map(i=>`${i.qty} × ${i.name}${i.sku?' ['+i.sku+']':''} — $${(i.qty*i.unit).toFixed(2)}`).join('\n');
+    const params={
+      order_id: '#'+orderId,
+      customer_name: o.name,
+      customer_phone: o.phone,
+      customer_address: o.address,
+      customer_note: o.note || '—',
+      items_list: itemsPlain,
+      total: totalTxt,
+      currency,
+      site_name: 'Zeina — Home & Kitchen Accessories'
+    };
+    await window.emailjs.send(EMAILJS.SERVICE_ID, EMAILJS.TEMPLATE_ID, params);
+    console.log('[checkout] email sent for order #'+orderId);
+  }catch(e){
+    console.warn('[checkout] email send failed for order #'+orderId, e);
+    /* Log to Supabase so the admin can see failed notifications later. Best-effort. */
+    if(sb && !DEMO){
+      try{ await sb.from('order_email_failures').insert({order_id:orderId,error:String(e&&e.message||e),occurred_at:new Date().toISOString()}); }catch(_){}
+    }
+  }
 }
 function renderOrderDone(orderId,entries,totalTxt,waMsg){
   document.getElementById('coContent').innerHTML=`
