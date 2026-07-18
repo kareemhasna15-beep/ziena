@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /_import/
+
+Sitemap: https://kareemhasna15-beep.github.io/ziena/sitemap.xml
