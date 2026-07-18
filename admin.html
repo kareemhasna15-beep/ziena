@@ -12,6 +12,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Parisienne&family=Jost:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
 :root{
   --magenta:#BA1270;--magenta-deep:#8C0D54;--plum:#4A0A30;
@@ -87,6 +89,55 @@ tr:hover td{background:#FDF8FB}
 .toast{position:fixed;bottom:26px;left:50%;transform:translate(-50%,80px);background:var(--plum);color:#fff;padding:12px 24px;border-radius:999px;font-size:.86rem;z-index:90;transition:.3s;opacity:0}
 .toast.show{transform:translate(-50%,0);opacity:1}
 @media(max-width:760px){.fgrid{grid-template-columns:1fr}.topbar .brand .tag{display:none}}
+
+/* import + image management */
+.dropzone{border:2px dashed var(--blush-2);border-radius:16px;padding:34px 20px;text-align:center;background:#FDFBFC;transition:.2s;cursor:pointer;color:var(--ink-soft)}
+.dropzone.on{border-color:var(--magenta);background:var(--blush);color:var(--plum)}
+.dropzone strong{color:var(--plum);font-size:1.05rem;display:block;margin-bottom:6px}
+.dropzone .sm{font-size:.78rem}
+.parse-summary{background:var(--blush);border:1px solid var(--blush-2);border-radius:12px;padding:16px 18px;margin-bottom:18px;font-size:.86rem}
+.parse-summary .row{display:flex;gap:14px;flex-wrap:wrap}
+.parse-summary b{color:var(--plum)}
+.import-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.import-toolbar .counter{margin-inline-start:auto;color:var(--ink-soft);font-size:.82rem;font-weight:600}
+.review-card{border:1.5px solid var(--blush-2);border-radius:14px;padding:14px;margin-bottom:12px;display:grid;grid-template-columns:110px 1fr auto;gap:14px;background:#fff}
+.review-card.new{border-left:4px solid #22C55E}
+.review-card.update{border-left:4px solid #EAB308}
+.review-card.skipped{opacity:.45}
+.review-card.done{opacity:.55;background:#F5FFF8}
+.review-thumb{width:110px;height:110px;border-radius:10px;background:var(--blush);display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--ink-soft);font-size:.72rem;position:relative}
+.review-thumb img{width:100%;height:100%;object-fit:cover}
+.review-thumb.no-photo::after{content:'no photo'}
+.review-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.review-body .fg{margin:0}
+.review-body input,.review-body select{padding:8px 10px;font-size:.84rem}
+.review-badge{display:inline-block;font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;margin-bottom:6px}
+.review-badge.new{background:#DCFCE7;color:#166534}
+.review-badge.update{background:#FEF9C3;color:#854D0E}
+.review-badge.error{background:#FEE2E2;color:#991B1B}
+.review-actions{display:flex;flex-direction:column;gap:6px;align-items:stretch;justify-content:center;min-width:110px}
+.review-actions .btn{padding:8px 14px;font-size:.78rem;justify-content:center}
+.review-actions .btn.skip{background:transparent;border:1.5px solid var(--blush-2);color:var(--ink-soft)}
+.review-actions .btn.skip:hover{border-color:var(--bad);color:var(--bad)}
+.review-diff{font-size:.72rem;color:var(--ink-soft);margin-top:6px}
+.review-diff .k{color:var(--plum);font-weight:600}
+.review-diff s{color:#dc2626}
+
+.img-manage{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.img-tile{position:relative;width:96px;height:96px;border-radius:10px;overflow:hidden;border:1.5px solid var(--blush-2);background:var(--blush);cursor:move;user-select:none}
+.img-tile img{width:100%;height:100%;object-fit:cover;pointer-events:none}
+.img-tile.dragging{opacity:.4}
+.img-tile.drop-target{outline:2px dashed var(--magenta);outline-offset:-2px}
+.img-tile .badge-main{position:absolute;top:4px;inset-inline-start:4px;background:var(--magenta);color:#fff;font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:6px}
+.img-tile .rm{position:absolute;top:4px;inset-inline-end:4px;background:rgba(0,0,0,.6);color:#fff;border:none;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:.9rem;line-height:1;padding:0;display:flex;align-items:center;justify-content:center}
+.img-add{width:96px;height:96px;border-radius:10px;border:2px dashed var(--blush-2);background:transparent;color:var(--ink-soft);font-size:.78rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:.2s}
+.img-add:hover{border-color:var(--magenta);color:var(--magenta);background:var(--blush)}
+.img-add.on{border-color:var(--magenta);background:var(--blush)}
+.img-add span{font-size:1.4rem;line-height:1}
+
+.err-list{background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:.82rem}
+.err-list ul{margin:6px 0 0 18px}
+.import-diag{font-size:.78rem;color:var(--ink-soft);margin-top:10px;font-family:'SFMono-Regular',ui-monospace,monospace}
 </style>
 </head>
 <body>
@@ -182,6 +233,21 @@ let demoSeq=2000;
 let SESSION=null,TAB='dash',PRODUCTS=[],ORDERS=[],editingId=null,pickedIcon='mug';
 let A_RANGE=30,A_PROD='all',charts=[];
 let mItems=[],mName='';
+/* Import state */
+let IMPORT={ rows:[], summary:null, errors:[], fallbackImgs:{}, sourceLayout:null };
+/* Edited product images buffer while editing */
+let editImages=[];
+let dragImgIx=-1;
+
+const IMG_BASE_ADMIN='website_images/';
+const asImgUrl=f=>{
+  if(!f) return '';
+  const s=String(f).trim();
+  if(!s) return '';
+  if(/^(https?:\/\/|\/|data:)/i.test(s)) return s;
+  if(s.startsWith(IMG_BASE_ADMIN)) return s;
+  return IMG_BASE_ADMIN+s;
+};
 const app=document.getElementById('app');
 let toastTimer;
 function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');
@@ -271,9 +337,10 @@ function render(){
         <div class="fg"><label>Category</label><select id="fC">
           ${categories.map(c=>`<option value="${c.id}" ${ed&&ed.category===c.id?'selected':''}>${c.en}</option>`).join('')}</select></div>
         <div class="fg"><label>Best seller</label><select id="fB"><option value="">No</option><option value="1" ${ed&&ed.best?'selected':''}>Yes</option></select></div>
-        <div class="fg full"><label>Images — one filename per line or comma-separated. First image is the main.</label>
-          <textarea id="fImgs" rows="3" dir="ltr" style="width:100%;padding:11px 13px;border:1.5px solid var(--blush-2);border-radius:10px;font-size:.92rem;background:#FDFBFC;font-family:inherit" placeholder="TDN-32007.jpg&#10;TDN-32007_2.jpg">${esc(edImgs.join('\n'))}</textarea>
-          <p class="muted" style="margin-top:6px">Filenames are looked up in <code>website_images/</code>. Full https:// URLs also work.</p>
+        <div class="fg full"><label>Images — drag to reorder, first is the main. Upload adds new photos to Supabase Storage.</label>
+          <div id="imgManage" class="img-manage"></div>
+          <input id="fImgUpload" type="file" accept="image/*" multiple style="display:none">
+          <p class="muted" style="margin-top:6px">Uploads are compressed to ~1600px JPEG. Existing repo files stay linked as-is.</p>
         </div>
         <div class="fg full"><label>Icon (fallback when no image)</label>
           <div class="icon-pick" id="iconPick">
@@ -302,6 +369,9 @@ function render(){
         </td></tr>`}).join('')}
       </table>
     </div>`;
+  }
+  if(TAB==='import'){
+    body=importPanelHtml();
   }
   if(TAB==='analytics'){
     /* list of item names that actually appear in orders + current products */
@@ -398,7 +468,7 @@ function render(){
   <main><div class="wrap">
     ${DEMO?'<div class="warn-banner">⚠ Demo mode — sample data, changes are not saved. Fill in the Supabase keys in this file to go live.</div>':''}
     <div class="tabs">
-      ${['dash|Dashboard','analytics|Analytics','products|Products','orders|Orders & Sales'].map(x=>{const[i,l]=x.split('|');
+      ${['dash|Dashboard','analytics|Analytics','products|Products','import|Import','orders|Orders & Sales'].map(x=>{const[i,l]=x.split('|');
         return `<button class="tab ${TAB===i?'active':''}" onclick="TAB='${i}';render()">${l}</button>`}).join('')}
     </div>
     ${body}
@@ -488,7 +558,7 @@ async function saveProduct(){
   const best=!!document.getElementById('fB').value;
   const sku=document.getElementById('fSku').value.trim();
   const barcode=document.getElementById('fBar').value.trim();
-  const images=parseImages(document.getElementById('fImgs').value);
+  const images=editImages.slice();
   if(!en){toast('Name is required');return}
   if(price!==null && isNaN(price)){toast('Price must be a number or blank');return}
   const row={en,ar,sku:sku||null,barcode:barcode||null,price,cost_usd,category,best,icon:pickedIcon,images};
@@ -603,6 +673,519 @@ function beep(){
     play(880,0,.18);play(1174,.16,.24);
   }catch(e){}
 }
+/* ══════════ Image compression + upload ══════════ */
+async function loadImageFromBlob(blob){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(blob);
+    const im=new Image();
+    im.onload=()=>{ URL.revokeObjectURL(url); resolve(im); };
+    im.onerror=e=>{ URL.revokeObjectURL(url); reject(e); };
+    im.src=url;
+  });
+}
+async function compressImage(file,maxDim=1600,quality=0.82){
+  try{
+    const im=await loadImageFromBlob(file);
+    let w=im.naturalWidth,h=im.naturalHeight;
+    const scale=Math.min(1,maxDim/Math.max(w,h));
+    w=Math.round(w*scale); h=Math.round(h*scale);
+    const cv=document.createElement('canvas');
+    cv.width=w; cv.height=h;
+    const ctx=cv.getContext('2d');
+    ctx.fillStyle='#fff';
+    ctx.fillRect(0,0,w,h);
+    ctx.drawImage(im,0,0,w,h);
+    return await new Promise(res=>cv.toBlob(res,'image/jpeg',quality));
+  }catch(e){ return file; /* fall back to raw */ }
+}
+function slugSku(sku){ return (sku||'unknown').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)||'p'; }
+async function uploadProductImage(file,sku){
+  if(!sb) throw new Error('Not connected');
+  const blob=await compressImage(file);
+  const safe=slugSku(sku);
+  const path=`${safe}/${Date.now()}-${Math.random().toString(36).slice(2,7)}.jpg`;
+  const {data,error}=await sb.storage.from('product-images').upload(path,blob,{contentType:'image/jpeg',upsert:false});
+  if(error) throw error;
+  const {data:pub}=sb.storage.from('product-images').getPublicUrl(data.path);
+  return pub.publicUrl;
+}
+
+/* ══════════ Image manager UI (product editor) ══════════ */
+function paintImgManager(){
+  const box=document.getElementById('imgManage');
+  if(!box) return;
+  box.innerHTML=editImages.map((src,i)=>`
+    <div class="img-tile" draggable="true" data-ix="${i}"
+      ondragstart="imgDragStart(event,${i})" ondragover="imgDragOver(event,${i})"
+      ondragleave="imgDragLeave(event,${i})" ondrop="imgDrop(event,${i})" ondragend="imgDragEnd(event)">
+      <img src="${esc(asImgUrl(src))}" alt="" loading="lazy">
+      ${i===0?'<span class="badge-main">MAIN</span>':''}
+      <button type="button" class="rm" title="Remove" onclick="removeEditImage(${i})">×</button>
+    </div>`).join('')+`
+    <button type="button" class="img-add" id="imgAdd" onclick="document.getElementById('fImgUpload').click()">
+      <span>＋</span>Add photo
+    </button>`;
+  const addEl=document.getElementById('imgAdd');
+  if(addEl){
+    ['dragenter','dragover'].forEach(ev=>addEl.addEventListener(ev,e=>{e.preventDefault();addEl.classList.add('on')}));
+    ['dragleave','drop'].forEach(ev=>addEl.addEventListener(ev,e=>{addEl.classList.remove('on')}));
+    addEl.addEventListener('drop',async e=>{
+      e.preventDefault();
+      const files=[...(e.dataTransfer.files||[])].filter(f=>/^image\//.test(f.type));
+      await handleImageFiles(files);
+    });
+  }
+  const inp=document.getElementById('fImgUpload');
+  if(inp){
+    inp.onchange=async e=>{
+      const files=[...(e.target.files||[])].filter(f=>/^image\//.test(f.type));
+      await handleImageFiles(files);
+      inp.value='';
+    };
+  }
+}
+async function handleImageFiles(files){
+  if(!files.length) return;
+  if(DEMO){ toast('Uploads need Supabase live mode'); return; }
+  const sku=(document.getElementById('fSku')||{}).value||'unknown';
+  toast(`Uploading ${files.length} photo${files.length>1?'s':''}…`);
+  for(const f of files){
+    try{
+      const url=await uploadProductImage(f,sku);
+      editImages.push(url);
+      paintImgManager();
+    }catch(err){
+      console.error(err);
+      toast('Upload failed: '+(err.message||err));
+    }
+  }
+  toast('Photos ready — click Save to keep them');
+}
+function removeEditImage(i){ editImages.splice(i,1); paintImgManager(); }
+function imgDragStart(e,i){ dragImgIx=i; e.dataTransfer.effectAllowed='move'; e.currentTarget.classList.add('dragging'); }
+function imgDragOver(e,i){ if(dragImgIx===-1||dragImgIx===i) return; e.preventDefault(); e.currentTarget.classList.add('drop-target'); }
+function imgDragLeave(e){ e.currentTarget.classList.remove('drop-target'); }
+function imgDrop(e,i){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drop-target');
+  if(dragImgIx===-1||dragImgIx===i){ dragImgIx=-1; return; }
+  const item=editImages.splice(dragImgIx,1)[0];
+  editImages.splice(i,0,item);
+  dragImgIx=-1;
+  paintImgManager();
+}
+function imgDragEnd(e){
+  document.querySelectorAll('.img-tile').forEach(el=>el.classList.remove('dragging','drop-target'));
+  dragImgIx=-1;
+}
+
+/* ══════════ Import panel ══════════ */
+function importPanelHtml(){
+  const stage = IMPORT.summary ? 'review' : 'drop';
+  if(stage==='drop'){
+    return `
+    <div class="panel"><h3>Import products from Excel or CSV</h3>
+      <p class="muted" style="margin-bottom:14px">Drop your file and I'll parse it, match embedded photos, and show a review card per row. Nothing is saved until you confirm.</p>
+      <div class="dropzone" id="importDrop">
+        <strong>Drop .xlsx / .xls / .csv here</strong>
+        <span class="sm">or click to choose a file</span>
+      </div>
+      <input type="file" id="importFile" accept=".xlsx,.xls,.csv" style="display:none">
+      <p class="muted" style="margin-top:12px;font-size:.78rem">
+        Supports the original <code>Zeina_Products_Import.xlsx</code> layout (legend row 1, headers row 2, embedded photos) and any plain sheet with headers in row 1. Sheet names don't matter — I'll pick "Products" if it exists.
+      </p>
+    </div>`;
+  }
+  const {summary,rows,errors} = IMPORT;
+  const remaining=rows.filter(r=>r.status==='pending').length;
+  const confirmed=rows.filter(r=>r.status==='confirmed').length;
+  return `
+  <div class="panel"><h3>Review import</h3>
+    <div class="parse-summary">
+      <div class="row">
+        <span><b>Layout:</b> ${esc(summary.layout)}</span>
+        <span><b>Rows:</b> ${summary.total}</span>
+        <span><b>New:</b> ${summary.newCount}</span>
+        <span><b>Updates:</b> ${summary.updateCount}</span>
+        <span><b>Photos matched:</b> ${summary.imgMatched} / ${summary.total}</span>
+        <span><b>Duplicates in file:</b> ${summary.dupCount}</span>
+      </div>
+    </div>
+    ${errors.length?`<div class="err-list"><b>${errors.length} row${errors.length>1?'s':''} skipped:</b>
+      <ul>${errors.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>`:''}
+    <div class="import-toolbar">
+      <button class="btn btn-p" onclick="importCommitAll()">Confirm all remaining (${remaining})</button>
+      <button class="btn btn-g" onclick="importFallbackDrop()">${IMPORT.summary.imgMatched<IMPORT.summary.total?'Add missing photos':'Change photos'}</button>
+      <button class="btn btn-g" onclick="importReset()">Discard</button>
+      <span class="counter">${confirmed} saved · ${remaining} pending</span>
+    </div>
+    <div id="importReviewList">${rows.map(reviewCardHtml).join('')}</div>
+  </div>`;
+}
+function reviewCardHtml(r){
+  const badge = r.status==='error' ? 'error' : (r.mode||'new');
+  const label = r.status==='error' ? 'ERROR' : (r.mode==='update'?'UPDATE':'NEW');
+  const catSel = categories.map(c=>`<option value="${c.id}" ${r.category===c.id?'selected':''}>${c.en}</option>`).join('');
+  return `
+  <div class="review-card ${r.mode||'new'} ${r.status==='confirmed'?'done':''} ${r.status==='skipped'?'skipped':''}" data-rid="${r.rid}">
+    <div class="review-thumb ${r.imgPreview?'':'no-photo'}">${r.imgPreview?`<img src="${esc(r.imgPreview)}" alt="">`:''}</div>
+    <div>
+      <span class="review-badge ${badge}">${label}</span>
+      ${r.mode==='update' && r.existing ? `
+        <div class="review-diff">SKU <code>${esc(r.sku)}</code> already exists — changed fields will overwrite (price is preserved unless you edit it here).</div>` : ''}
+      <div class="review-body">
+        <div class="fg"><label>Name (EN)</label><input value="${esc(r.en||'')}" oninput="onReviewEdit('${r.rid}','en',this.value)"></div>
+        <div class="fg"><label>Name (AR)</label><input dir="rtl" value="${esc(r.ar||'')}" oninput="onReviewEdit('${r.rid}','ar',this.value)"></div>
+        <div class="fg"><label>SKU</label><input dir="ltr" value="${esc(r.sku||'')}" oninput="onReviewEdit('${r.rid}','sku',this.value)"></div>
+        <div class="fg"><label>Barcode</label><input dir="ltr" value="${esc(r.barcode||'')}" oninput="onReviewEdit('${r.rid}','barcode',this.value)"></div>
+        <div class="fg"><label>Retail (USD)</label><input type="number" step="0.5" value="${r.price!=null?r.price:''}" placeholder="blank = contact for price" oninput="onReviewEdit('${r.rid}','price',this.value)"></div>
+        <div class="fg"><label>Cost (USD)</label><input type="number" step="0.01" value="${r.cost_usd!=null?r.cost_usd:''}" oninput="onReviewEdit('${r.rid}','cost_usd',this.value)"></div>
+        <div class="fg"><label>Category</label><select onchange="onReviewEdit('${r.rid}','category',this.value)">${catSel}</select></div>
+        <div class="fg"><label>Sub-category</label><input value="${esc(r.sub_category||'')}" oninput="onReviewEdit('${r.rid}','sub_category',this.value)"></div>
+      </div>
+    </div>
+    <div class="review-actions">
+      ${r.status==='pending'?`
+        <button class="btn btn-p" onclick="importCommitOne('${r.rid}')">Confirm</button>
+        <button class="btn skip" onclick="importSkipOne('${r.rid}')">Skip</button>
+      `:r.status==='confirmed'?`<span class="review-badge new" style="text-align:center">SAVED</span>`
+        :`<span class="review-badge error" style="text-align:center">${r.status.toUpperCase()}</span>`}
+    </div>
+  </div>`;
+}
+function onReviewEdit(rid,field,val){
+  const r=IMPORT.rows.find(x=>x.rid===rid); if(!r) return;
+  if(field==='price'||field==='cost_usd'){ r[field]= val===''?null:parseFloat(val); }
+  else r[field]=val;
+}
+
+/* Bind drop handlers after render */
+function wireImportDrop(){
+  const dz=document.getElementById('importDrop'); if(!dz) return;
+  const inp=document.getElementById('importFile');
+  dz.onclick=()=>inp.click();
+  ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('on')}));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{dz.classList.remove('on')}));
+  dz.addEventListener('drop',async e=>{
+    e.preventDefault(); dz.classList.remove('on');
+    const f=(e.dataTransfer.files||[])[0]; if(f) await parseImportFile(f);
+  });
+  inp.onchange=async e=>{ const f=(e.target.files||[])[0]; if(f) await parseImportFile(f); inp.value=''; };
+}
+
+/* ══════════ Parser ══════════ */
+const NAME_KEYS={
+  sku:['sku','sku/code','code','item code'],
+  barcode:['barcode','ean','upc'],
+  en:['name (english)','name english','english name','en name','name en','name','product'],
+  ar:['name (arabic)','name arabic','arabic name','ar name','name ar'],
+  category:['category','sub category','sub-category'],
+  price:['retail price','retail','price','price (usd)','usd retail'],
+  cost:['cost (usd)','cost','cost usd','purchase price']
+};
+function matchKey(header,alts){
+  const h=String(header||'').toLowerCase().trim().replace(/\s+/g,' ');
+  return alts.some(a=>h===a||h.replace(/[()]/g,'').trim()===a);
+}
+function findHeaderRow(rowsAOA){
+  for(let i=0;i<Math.min(6,rowsAOA.length);i++){
+    const cells=rowsAOA[i]||[];
+    for(const c of cells){
+      if(matchKey(c,NAME_KEYS.sku)) return i;
+    }
+  }
+  return -1;
+}
+function mapHeaders(headerRow){
+  const map={};
+  headerRow.forEach((h,ix)=>{
+    for(const [k,alts] of Object.entries(NAME_KEYS)){
+      if(matchKey(h,alts)){ if(map[k]==null) map[k]=ix; }
+    }
+  });
+  return map;
+}
+async function extractXlsxImages(file){
+  /* Best-effort: read xl/media/*, xl/drawings/*.xml, and _rels to map images to spreadsheet rows */
+  const out={ byRow:{}, all:[] };
+  try{
+    const zip=await JSZip.loadAsync(file);
+    const mediaKeys=Object.keys(zip.files).filter(n=>/^xl\/media\/image/i.test(n));
+    const media={}; // relId? no — just filename base to blob url
+    for(const k of mediaKeys){
+      const blob=await zip.files[k].async('blob');
+      const url=URL.createObjectURL(blob);
+      const base=k.split('/').pop();
+      media[base]=url;
+      out.all.push(url);
+    }
+    // Read drawing xml files
+    const drawingXmls=Object.keys(zip.files).filter(n=>/^xl\/drawings\/drawing\d+\.xml$/i.test(n));
+    for(const dn of drawingXmls){
+      const xml=await zip.files[dn].async('string');
+      const rn = dn.replace('drawings/','drawings/_rels/')+'.rels';
+      let relsXml=''; try{ if(zip.files[rn]) relsXml=await zip.files[rn].async('string'); }catch(_){}
+      // Parse rels: id -> media filename
+      const relMap={};
+      relsXml.replace(/<Relationship[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"/g,(_,id,tgt)=>{
+        const base=tgt.split('/').pop(); relMap[id]=base; return '';
+      });
+      // Parse anchors: xdr:from row + rEmbed id
+      const anchorRe=/<xdr:(?:oneCellAnchor|twoCellAnchor|absoluteAnchor)[\s\S]*?<\/xdr:(?:oneCellAnchor|twoCellAnchor|absoluteAnchor)>/g;
+      const matches=xml.match(anchorRe)||[];
+      for(const a of matches){
+        const rowM=a.match(/<xdr:from>[\s\S]*?<xdr:row>(\d+)<\/xdr:row>/);
+        const idM=a.match(/r:embed="([^"]+)"/);
+        if(rowM && idM){
+          const zeroBasedRow=+rowM[1];
+          const embed=idM[1];
+          const media=relMap[embed];
+          if(media && !out.byRow[zeroBasedRow]) out.byRow[zeroBasedRow]=media;
+        }
+      }
+    }
+    out.media=media;
+  }catch(e){
+    console.warn('image extraction failed:',e);
+  }
+  return out;
+}
+async function parseImportFile(file){
+  toast('Parsing…');
+  const name=file.name.toLowerCase();
+  const ext=name.split('.').pop();
+  let workbook;
+  try{
+    const buf=await file.arrayBuffer();
+    workbook=XLSX.read(buf,{type:'array',cellDates:false});
+  }catch(e){ toast('Could not open file: '+e.message); return; }
+  const sheetName = workbook.SheetNames.includes('Products') ? 'Products' : workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const aoa = XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,defval:''});
+  const hRow = findHeaderRow(aoa);
+  if(hRow<0){ toast('Could not find a header row with SKU/Code'); return; }
+  const headers = aoa[hRow];
+  const cols = mapHeaders(headers);
+  const missing=['sku','en'].filter(k=>cols[k]==null);
+  const layout = hRow===0 ? 'plain (headers row 1)' : `Zeina layout (headers row ${hRow+1})`;
+  const dataRows = aoa.slice(hRow+1).filter(r=>r.some(c=>String(c||'').trim()!==''));
+
+  // Image extraction from xlsx (best-effort)
+  let imgExtract={byRow:{},media:{}};
+  if(ext==='xlsx'){ imgExtract=await extractXlsxImages(file); }
+
+  IMPORT.rows=[]; IMPORT.errors=[]; IMPORT.fallbackImgs={};
+  const seenSku=new Map();
+  let dupCount=0, newCount=0, updateCount=0, imgMatched=0;
+  const existingBySku={};
+  PRODUCTS.forEach(p=>{ if(p.sku) existingBySku[String(p.sku).trim()]=p; });
+
+  dataRows.forEach((row,ix)=>{
+    const get=k=>{ const c=cols[k]; return c==null?'':String(row[c]||'').trim(); };
+    const rid='r'+ix;
+    const sku=get('sku');
+    const en=get('en');
+    const ar=get('ar');
+    if(!sku && !en){ IMPORT.errors.push(`Row ${hRow+2+ix}: no SKU and no name`); return; }
+    if(!en && !ar){ IMPORT.errors.push(`Row ${hRow+2+ix} (SKU ${sku||'—'}): no name in either language`); return; }
+    if(sku && seenSku.has(sku)){
+      dupCount++;
+      IMPORT.errors.push(`Row ${hRow+2+ix}: duplicate SKU ${sku} — merged with first occurrence`);
+      // merge: fill any blank fields into first
+      const first=seenSku.get(sku);
+      ['en','ar','barcode','category','sub_category'].forEach(k=>{ if(!first[k]&&get(k)) first[k]=get(k); });
+      return;
+    }
+    const priceRaw=get('price'); const price = priceRaw===''?null:parseFloat(priceRaw);
+    const costRaw=get('cost'); const cost_usd = costRaw===''?null:parseFloat(costRaw);
+    // Category detection: xlsx has 17 fine categories → sub_category; site coarse category best-guess.
+    const rawCat=get('category');
+    const coarse = mapToCoarseCategory(rawCat, en);
+    const dataRowNumInSheet = hRow + 1 + ix; // zero-based
+    const imgFromXlsx = imgExtract.byRow[dataRowNumInSheet];
+    const imgUrlPreview = imgFromXlsx ? imgExtract.media[imgFromXlsx] : null;
+    if(imgUrlPreview) imgMatched++;
+    const existing = sku ? existingBySku[sku] : null;
+    const mode = existing ? 'update' : 'new';
+    if(mode==='update') updateCount++; else newCount++;
+    const r={
+      rid,
+      sku, en, ar,
+      barcode: get('barcode'),
+      category: coarse,
+      sub_category: rawCat || (existing?existing.sub_category:''),
+      price: (price!=null && !isNaN(price)) ? price : null,
+      cost_usd: (cost_usd!=null && !isNaN(cost_usd)) ? cost_usd : null,
+      imgPreview: imgUrlPreview,
+      imgBlobKey: imgFromXlsx || null,
+      mediaBlobUrls: imgExtract.media,
+      mode, existing, status:'pending'
+    };
+    IMPORT.rows.push(r);
+    if(sku) seenSku.set(sku, r);
+  });
+
+  IMPORT.summary={
+    layout, total:IMPORT.rows.length, newCount, updateCount, imgMatched, dupCount, missing
+  };
+  toast(`Parsed ${IMPORT.rows.length} rows`);
+  render();
+}
+function mapToCoarseCategory(sub,name){
+  const s=String(sub||'').toLowerCase();
+  const n=String(name||'').toLowerCase();
+  if(/plates?|dinnerware/.test(s)) return 'dinner';
+  if(/coffee|tea/.test(s)) return 'coffee';
+  if(/mug|glassware|drinkware|jug|bottle|thermos/.test(s)) return 'drink';
+  if(/cutlery|spoon|fork|knife/.test(s)) return 'cutlery';
+  if(/tray|bowl|serve/.test(s)) return 'serve';
+  if(/tissue/.test(s)) return 'tissue';
+  if(/storage|jar|fridge|kitchen tool/.test(s)) return 'kitchen';
+  if(/lamp|mirror|vase|decor|basket|organizer/.test(s)) return 'decor';
+  if(/mug/.test(n)) return 'drink';
+  if(/plate|dinner/.test(n)) return 'dinner';
+  if(/tissue/.test(n)) return 'tissue';
+  return 'decor';
+}
+function importReset(){ IMPORT={ rows:[], summary:null, errors:[], fallbackImgs:{}, sourceLayout:null }; render(); }
+function importSkipOne(rid){ const r=IMPORT.rows.find(x=>x.rid===rid); if(!r) return; r.status='skipped'; render(); }
+async function importCommitOne(rid){
+  const r=IMPORT.rows.find(x=>x.rid===rid); if(!r||r.status!=='pending') return;
+  const ok = await commitOneRow(r);
+  if(ok){ r.status='confirmed'; render(); }
+  else { toast('Save failed for '+r.sku); }
+}
+async function importCommitAll(){
+  const pending=IMPORT.rows.filter(x=>x.status==='pending');
+  if(!pending.length){ toast('Nothing to confirm'); return; }
+  toast(`Saving ${pending.length}…`);
+  let ok=0,bad=0;
+  for(const r of pending){
+    const done=await commitOneRow(r);
+    if(done){ r.status='confirmed'; ok++; } else bad++;
+  }
+  toast(`Saved ${ok}${bad?`, ${bad} failed`:''}`);
+  await loadAll(); render();
+}
+async function commitOneRow(r){
+  try{
+    // Upload embedded image if present
+    let imageUrls = [];
+    if(r.imgBlobKey && r.mediaBlobUrls && r.mediaBlobUrls[r.imgBlobKey]){
+      const url=r.mediaBlobUrls[r.imgBlobKey];
+      const blob=await fetch(url).then(x=>x.blob());
+      const uploaded=await uploadProductImage(new File([blob],'xls-photo.'+((r.imgBlobKey.split('.').pop())||'jpg'),{type:blob.type||'image/jpeg'}), r.sku);
+      imageUrls.push(uploaded);
+    }
+    // Fallback images matched by SKU filename
+    if(!imageUrls.length && r.sku && IMPORT.fallbackImgs[r.sku]){
+      for(const f of IMPORT.fallbackImgs[r.sku]){
+        const uploaded=await uploadProductImage(f,r.sku);
+        imageUrls.push(uploaded);
+      }
+    }
+    // Preserve existing images if update and no new ones supplied
+    if(r.mode==='update' && !imageUrls.length && r.existing){
+      imageUrls = productImages(r.existing);
+    }
+    const row = {
+      sku: r.sku||null, barcode: r.barcode||null,
+      en: r.en, ar: r.ar,
+      category: r.category || 'decor',
+      sub_category: r.sub_category || null,
+      cost_usd: r.cost_usd,
+      icon: (r.existing&&r.existing.icon)||'basket',
+      images: imageUrls
+    };
+    // Price rule: preserve existing on update unless admin edited (r.price !== r.existing.price when different)
+    if(r.mode==='update' && r.existing){
+      const existingPrice = r.existing.price;
+      const edited = (r.price!==existingPrice);
+      row.price = edited ? r.price : existingPrice;
+    } else {
+      row.price = r.price;
+    }
+    if(DEMO){
+      if(r.mode==='update' && r.existing){ Object.assign(r.existing,row); }
+      else demoProducts.push({id:++demoSeq,...row,best:false});
+      return true;
+    }
+    if(r.mode==='update' && r.existing){
+      const {error}=await sb.from('products').update(row).eq('id',r.existing.id);
+      if(error) throw error;
+    } else {
+      row.gradient=['g1','g2','g3','g4','g5'][Math.floor(Math.random()*5)];
+      const {error}=await sb.from('products').insert(row);
+      if(error) throw error;
+    }
+    return true;
+  }catch(e){
+    console.error('commitOneRow failed:',e);
+    return false;
+  }
+}
+
+/* Fallback: dropzone for image files, matched to rows by SKU-in-filename */
+function importFallbackDrop(){
+  const box=document.createElement('div');
+  box.innerHTML=`<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:16px;padding:22px;max-width:520px;width:92%">
+      <h3 style="margin-bottom:10px;color:var(--plum)">Match images by SKU</h3>
+      <p class="muted" style="margin-bottom:12px">Drop image files here. I'll match them to rows whose SKU appears in the filename (slashes become dashes). Files without a match are ignored.</p>
+      <div class="dropzone" id="fbDrop"><strong>Drop images here</strong><span class="sm">or click to choose</span></div>
+      <input type="file" id="fbInput" accept="image/*" multiple style="display:none">
+      <div style="text-align:right;margin-top:14px">
+        <button class="btn btn-g" id="fbClose">Done</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(box);
+  const closeBtn=box.querySelector('#fbClose');
+  const dz=box.querySelector('#fbDrop');
+  const inp=box.querySelector('#fbInput');
+  const process=files=>{
+    let matched=0;
+    for(const f of files){
+      const base=f.name.replace(/\.[^.]+$/,'').toLowerCase();
+      const stem=base.replace(/_\d+$/,''); // strip _2, _3 etc.
+      for(const r of IMPORT.rows){
+        if(!r.sku) continue;
+        const skuDashed=r.sku.replace(/\//g,'-').toLowerCase();
+        if(base.startsWith(skuDashed) || stem===skuDashed){
+          (IMPORT.fallbackImgs[r.sku]=IMPORT.fallbackImgs[r.sku]||[]).push(f);
+          const url=URL.createObjectURL(f);
+          if(!r.imgPreview) r.imgPreview=url;
+          matched++;
+          break;
+        }
+      }
+    }
+    toast(`Matched ${matched} of ${files.length}`);
+    render();
+  };
+  dz.onclick=()=>inp.click();
+  ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('on')}));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{dz.classList.remove('on')}));
+  dz.addEventListener('drop',e=>{ e.preventDefault(); process([...(e.dataTransfer.files||[])]); });
+  inp.onchange=e=>{ process([...(e.target.files||[])]); inp.value=''; };
+  closeBtn.onclick=()=>box.remove();
+}
+
+/* Hook: after each render(), wire up the import dropzone + image manager if their targets exist */
+const _origRender=render;
+render=function(){
+  _origRender();
+  wireImportDrop();
+  if(TAB==='products' && editingId!==null){
+    const ed=PRODUCTS.find(p=>p.id===editingId);
+    if(ed) editImages=productImages(ed).slice();
+    paintImgManager();
+  } else if(TAB==='products' && editingId===null){
+    editImages=[];
+    paintImgManager();
+  }
+};
+
 (async function(){
   if(sb){const {data}=await sb.auth.getSession();SESSION=data.session||null;}
   boot();
