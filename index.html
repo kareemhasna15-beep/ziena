@@ -107,15 +107,16 @@ button{font-family:inherit}
 
 /* ── Header ── */
 header{position:sticky;top:0;z-index:50;background:rgba(255,251,247,.93);backdrop-filter:blur(10px);border-bottom:1px solid var(--blush-2)}
-.nav{display:flex;align-items:center;justify-content:space-between;height:80px;gap:12px}
-.logo{display:flex;flex-direction:column;line-height:1;flex-shrink:0;cursor:pointer}
-.logo .script{font-family:'Parisienne',cursive;font-size:1.9rem;color:var(--magenta);line-height:1.25;display:block}
-.logo .sub{font-size:.54rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-top:7px;padding-inline-start:2px}
+.nav{display:flex;align-items:center;justify-content:space-between;height:80px;gap:12px;min-width:0}
+.logo{display:flex;flex-direction:column;line-height:1;flex-shrink:1;min-width:0;overflow:hidden;cursor:pointer}
+.logo .script{font-family:'Parisienne',cursive;font-size:1.9rem;color:var(--magenta);line-height:1.25;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logo .sub{font-size:.54rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-top:7px;padding-inline-start:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nav-links{display:flex;gap:24px;font-size:.86rem;letter-spacing:.06em;text-transform:uppercase;font-weight:500}
 html[dir="rtl"] .nav-links{letter-spacing:0;text-transform:none;font-size:.95rem}
 .nav-links a{padding:6px 0;border-bottom:2px solid transparent;transition:.25s;cursor:pointer}
 .nav-links a:hover{color:var(--magenta);border-color:var(--magenta)}
-.nav-right{display:flex;align-items:center;gap:10px}
+.nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:nowrap}
+.nav-right > *{flex-shrink:0}
 .toggle{display:flex;border:1.5px solid var(--blush-2);border-radius:999px;overflow:hidden;background:#fff}
 .toggle button{border:none;background:transparent;padding:6px 12px;font-size:.78rem;font-weight:600;cursor:pointer;color:var(--ink-soft);transition:.2s;line-height:1.4}
 .toggle button.on{background:var(--magenta);color:#fff}
@@ -588,6 +589,51 @@ html[dir="rtl"] .splash-hint-txt{letter-spacing:0;text-transform:none;font-size:
   .nav-links a{padding:14px 24px;border-bottom:none}
   .burger{display:block}
 }
+
+/* ── Mobile header restructure (Task 20) ──
+   At <=620px the header keeps ONLY logo + search + cart + burger visible.
+   Language / currency / WhatsApp move into the burger menu, and a floating
+   WhatsApp bubble comes back as the primary WA entry on mobile. This
+   guarantees the cart button is always visible at 320-430px in EN and AR. */
+.nav-mobile-controls{display:none}
+@media(max-width:620px){
+  .nav-right #langToggle,
+  .nav-right #curToggle,
+  .nav-right #waBtn{display:none!important}
+  .nav-links.nav-mobile-open{display:flex}
+  .nav-mobile-controls{display:flex;flex-direction:column;gap:10px;padding:14px 24px;border-top:1px solid var(--blush-2);margin-top:6px}
+  .nav-mobile-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .nav-mobile-row .nml{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+  html[dir="rtl"] .nav-mobile-row .nml{letter-spacing:0;font-size:.85rem;font-weight:700}
+  .nav-mobile-controls .toggle,
+  .nav-mobile-controls .wa-btn{flex-shrink:0}
+  .nav-mobile-controls .wa-btn{width:auto;height:auto;padding:9px 18px;border-radius:999px;gap:8px}
+  .nav-mobile-controls .wa-btn svg{width:18px;height:18px}
+  .nav-mobile-controls .wa-btn::after{content:attr(data-mobile-label);font-size:.85rem;font-weight:600}
+  /* Floating WA bubble — the primary WA entry on mobile */
+  .wa-float{position:fixed;bottom:22px;inset-inline-end:22px;z-index:60;width:52px;height:52px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(37,211,102,.35),0 3px 8px rgba(0,0,0,.15);transition:transform .2s ease,box-shadow .2s ease}
+  .wa-float:hover,.wa-float:active{transform:scale(1.06);box-shadow:0 10px 26px rgba(37,211,102,.45),0 3px 8px rgba(0,0,0,.2)}
+  .wa-float svg{width:26px;height:26px;fill:#fff}
+  /* Tighter header so logo+3 icons breathe */
+  .nav{height:64px;gap:6px}
+  .nav-right{gap:6px}
+  .cart-btn{width:38px;height:38px;flex-shrink:0}
+  .cart-btn svg{width:17px;height:17px}
+  .search-btn{width:38px;height:38px;flex-shrink:0}
+  .search-btn svg{width:17px;height:17px}
+  .burger{padding:6px;flex-shrink:0}
+  .burger span{width:22px}
+  .logo .script{font-size:1.55rem}
+  .logo .sub{font-size:.48rem;letter-spacing:.22em}
+}
+@media(max-width:400px){
+  .logo .script{font-size:1.4rem}
+  .logo .sub{display:none}
+  .nav{gap:4px}
+  .nav-right{gap:4px}
+}
+/* Hide the floating bubble on desktop — it lives in nav there */
+@media(min-width:621px){.wa-float{display:none!important}}
 @media(max-width:880px){
   .hero-grid,.pd-grid{grid-template-columns:1fr}
   .hero-grid{text-align:center}
@@ -804,7 +850,11 @@ html[dir="rtl"] .splash-hint-txt{letter-spacing:0;text-transform:none;font-size:
   </div>
 </aside>
 
-<!-- Floating WhatsApp bubble removed: the WA action lives in the header now for better reach on both mobile and desktop -->
+<!-- Floating WhatsApp bubble — primary WA entry on mobile (<=620px). CSS hides on desktop. -->
+<a class="wa-float" id="waFloat" target="_blank" rel="noopener" aria-label="WhatsApp">
+  <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C9.4 3 4 8.3 4 14.9c0 2.6.9 5 2.3 7L4 29l7.3-2.3c1.9 1 4 1.6 6.2 1.6 6.6 0 12-5.3 12-11.9S22.6 3 16 3zm5.9 16.9c-.3.8-1.5 1.5-2.4 1.7-.6.1-1.4.2-4.2-.9-3.5-1.5-5.8-5-6-5.3-.2-.2-1.4-1.9-1.4-3.6s.9-2.6 1.2-2.9c.3-.3.7-.4 1-.4h.7c.2 0 .5-.1.8.6.3.8 1 2.6 1.1 2.8.1.2.2.4 0 .7-.1.3-.2.4-.4.7l-.6.7c-.2.2-.4.4-.2.8.2.4 1 1.7 2.2 2.7 1.5 1.3 2.8 1.8 3.2 2 .4.2.6.1.9-.1.2-.3 1-1.2 1.3-1.6.3-.4.5-.3.9-.2.4.1 2.4 1.1 2.8 1.3.4.2.7.3.8.5.1.1.1.9-.2 1.5z"/></svg>
+</a>
+
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true">
   <button class="lb-close" id="lbClose" aria-label="Close" type="button">×</button>
   <button class="lb-nav prev" id="lbPrev" aria-label="Previous" type="button">‹</button>
@@ -889,6 +939,7 @@ const T = {
   similar:'Similar products',alsoBuy:'Customers also buy',backHome:'Home',contactPrice:'Contact for price',
   colSearchPh:'Search the collection…',noMatch:'No matching products.',
   askWa:'Ask on WhatsApp',
+  mobLang:'Language',mobCur:'Currency',mobAsk:'Chat with us',
   coTitle:'Checkout',coName:'Full name',coPhone:'Phone number',coAddr:'Delivery address',coNote:'Note (optional)',
   coSummary:'Order summary',coSend:'Place order',coHint:'Cash on delivery — no online payment. We will contact you to confirm.',
   coDone:'Order placed!',doneTitle:'Order received! 🎉',doneNo:'Order number',
@@ -919,6 +970,7 @@ const T = {
   similar:'منتجات مشابهة',alsoBuy:'الزبائن يشترون أيضاً',backHome:'الرئيسية',contactPrice:'اتصل للسعر',
   colSearchPh:'ابحث في المجموعة…',noMatch:'لا توجد منتجات مطابقة.',
   askWa:'اسألي عبر واتساب',
+  mobLang:'اللغة',mobCur:'العملة',mobAsk:'دردشة معنا',
   coTitle:'إتمام الطلب',coName:'الاسم الكامل',coPhone:'رقم الهاتف',coAddr:'عنوان التوصيل',coNote:'ملاحظة (اختياري)',
   coSummary:'ملخص الطلب',coSend:'تأكيد الطلب',coHint:'الدفع عند الاستلام — لا يوجد دفع إلكتروني. سنتواصل معك للتأكيد.',
   coDone:'تم استلام الطلب!',doneTitle:'تم استلام طلبك! 🎉',doneNo:'رقم الطلب',
@@ -1206,8 +1258,11 @@ function renderStatic(){
   const wa='https://wa.me/'+WA_NUMBER;
   document.getElementById('waContact').href=wa;
   const waAskTxt = LANG==='ar' ? 'مرحباً زينة! أودّ الاستفسار عن منتج' : "Hi Zeina! I'd like to ask about a product";
+  const waLink = wa + '?text=' + encodeURIComponent(waAskTxt);
   const waBtn=document.getElementById('waBtn');
-  if(waBtn) waBtn.href = wa + '?text=' + encodeURIComponent(waAskTxt);
+  if(waBtn){ waBtn.href = waLink; waBtn.setAttribute('data-mobile-label', LANG==='ar' ? 'واتساب' : 'WhatsApp'); }
+  const waFloat=document.getElementById('waFloat');
+  if(waFloat) waFloat.href = waLink;
 }
 function renderBest(){
   const vis=visibleDB();
@@ -1975,7 +2030,61 @@ function refresh(){
 }
 const navEl=document.getElementById('navLinks');
 document.getElementById('burger').addEventListener('click',()=>navEl.classList.toggle('open'));
-navEl.addEventListener('click',()=>navEl.classList.remove('open'));
+/* Only collapse the burger menu when a real nav link is tapped — not when
+   the user toggles language / currency inside it. */
+navEl.addEventListener('click',e=>{
+  if(e.target.closest('#navMobileControls')) return;
+  navEl.classList.remove('open');
+});
+
+/* ── Mobile header restructure (Task 20) ──
+   At <=620px, reparent langToggle / curToggle / waBtn from .nav-right into
+   the burger menu so the header keeps only logo + search + cart + burger
+   visible. On desktop they slot back into .nav-right in their original
+   positions. Handlers survive the move (elements keep their identity). */
+const NAV_MOBILE_MQ = window.matchMedia ? window.matchMedia('(max-width:620px)') : null;
+function placeNavControls(){
+  const isMobile = !!(NAV_MOBILE_MQ && NAV_MOBILE_MQ.matches);
+  const navRight = document.querySelector('.nav-right');
+  const navLinks = document.getElementById('navLinks');
+  const lang = document.getElementById('langToggle');
+  const cur = document.getElementById('curToggle');
+  const waBtn = document.getElementById('waBtn');
+  const searchBtn = document.getElementById('searchBtn');
+  const cartBtn = document.querySelector('.cart-btn');
+  if(!navRight || !navLinks || !lang || !cur || !waBtn) return;
+  if(isMobile){
+    let host = document.getElementById('navMobileControls');
+    if(!host){
+      host = document.createElement('div');
+      host.id = 'navMobileControls';
+      host.className = 'nav-mobile-controls';
+      host.innerHTML =
+        '<div class="nav-mobile-row"><span class="nml" data-t="mobLang">Language</span><span data-slot="lang"></span></div>' +
+        '<div class="nav-mobile-row"><span class="nml" data-t="mobCur">Currency</span><span data-slot="cur"></span></div>' +
+        '<div class="nav-mobile-row"><span class="nml" data-t="mobAsk">Chat with us</span><span data-slot="wa"></span></div>';
+      navLinks.appendChild(host);
+    }
+    const langSlot = host.querySelector('[data-slot="lang"]');
+    const curSlot = host.querySelector('[data-slot="cur"]');
+    const waSlot = host.querySelector('[data-slot="wa"]');
+    if(lang.parentElement !== langSlot) langSlot.appendChild(lang);
+    if(cur.parentElement !== curSlot) curSlot.appendChild(cur);
+    if(waBtn.parentElement !== waSlot) waSlot.appendChild(waBtn);
+  } else {
+    /* Put them back in nav-right in the original order:
+       langToggle, curToggle, searchBtn, waBtn, cart-btn, burger */
+    if(lang.parentElement !== navRight) navRight.insertBefore(lang, searchBtn || cartBtn);
+    if(cur.parentElement !== navRight) navRight.insertBefore(cur, searchBtn || cartBtn);
+    if(waBtn.parentElement !== navRight) navRight.insertBefore(waBtn, cartBtn);
+  }
+}
+if(NAV_MOBILE_MQ){
+  placeNavControls();
+  const onMq = ()=>{ placeNavControls(); };
+  if(NAV_MOBILE_MQ.addEventListener) NAV_MOBILE_MQ.addEventListener('change', onMq);
+  else if(NAV_MOBILE_MQ.addListener) NAV_MOBILE_MQ.addListener(onMq); /* Safari <14 fallback */
+}
 
 document.getElementById('searchClose').addEventListener('click',()=>closeSearch());
 document.getElementById('searchOverlay').addEventListener('click',e=>{
