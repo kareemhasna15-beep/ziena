@@ -459,6 +459,67 @@ mark.q{background:var(--gold-soft);color:var(--plum);font-weight:600;padding:0 2
   .search-body{padding:16px}
 }
 
+/* ── Find Us / map section ── */
+.findus{background:linear-gradient(180deg,#fff 0%,var(--blush) 100%);padding:80px 0}
+.findus-grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:56px;align-items:center}
+.findus-copy{min-width:0}
+.findus-eyebrow{display:inline-block;font-size:.72rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:14px}
+html[dir="rtl"] .findus-eyebrow{letter-spacing:.06em}
+.findus-copy h2{font-size:clamp(1.9rem,3.4vw,2.7rem);color:var(--plum);line-height:1.15}
+.findus-copy h2 em{font-family:'Parisienne',cursive;font-style:normal;color:var(--magenta);font-weight:400;font-size:1.15em}
+html[dir="rtl"] .findus-copy h2 em{font-family:'Tajawal',sans-serif;font-weight:700;font-size:1em}
+.findus-benefits{list-style:none;padding:0;margin:22px 0 30px;display:flex;flex-direction:column;gap:14px}
+.findus-benefits li{display:flex;gap:12px;align-items:flex-start;font-size:.95rem;color:var(--ink);line-height:1.5}
+.findus-benefits svg{color:var(--magenta);flex-shrink:0;margin-top:2px}
+.findus-benefits span{min-width:0}
+.findus-btn{gap:8px}
+html[dir="rtl"] .findus-btn svg{transform:scaleX(-1)}
+
+.findus-map-panel{position:relative;height:min(560px,64vh);border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(140,13,84,.14),inset 0 0 0 1px rgba(255,255,255,.6);background:linear-gradient(160deg,var(--blush) 0%,var(--blush-2) 100%);isolation:isolate}
+.findus-map-parallax{position:absolute;left:0;right:0;top:-40px;bottom:-40px;
+  /* Parallax translates this wrapper up/down; the extra 80px prevents edges showing */
+  transform:translate3d(0,0,0);will-change:transform;transition:transform .12s linear}
+.findus-map-parallax.no-parallax{transition:none;transform:translate3d(0,0,0)!important}
+.findus-map{position:absolute;inset:0;background:#F2E7EF}
+.findus-map-veil{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 40%,rgba(249,224,238,.18) 0%,rgba(249,224,238,.38) 60%,rgba(243,201,224,.48) 100%);
+  mix-blend-mode:multiply;
+  box-shadow:inset 0 0 60px rgba(140,13,84,.12);z-index:401 /* above tile pane but below controls */}
+.findus-map-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--magenta);opacity:1;transition:opacity .35s ease;z-index:410}
+.findus-map-placeholder.hidden{opacity:0;pointer-events:none}
+.findus-map-placeholder-inner{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.85);padding:10px 16px;border-radius:999px;font-weight:600;font-size:.86rem;box-shadow:0 6px 20px rgba(140,13,84,.12);letter-spacing:.02em}
+
+/* Pink tint on the tiles (subtle hue shift for streets, plus warm saturation) */
+.findus-map .leaflet-tile-pane{filter:hue-rotate(310deg) saturate(.85) brightness(1.02) contrast(.97)}
+.findus-map .leaflet-container{background:#F5E7EF;font-family:'Jost',sans-serif}
+.findus-map .leaflet-control-attribution{background:rgba(255,255,255,.85);color:var(--ink-soft);font-size:10px;padding:2px 6px;border-radius:6px 0 0 0}
+.findus-map .leaflet-control-attribution a{color:var(--magenta)}
+
+/* Main pin — magenta teardrop with gold ring + white Z, gentle bob */
+.zpin{position:relative;width:44px;height:60px;transform-origin:50% 100%;animation:zpin-bob 3s ease-in-out infinite;filter:drop-shadow(0 6px 10px rgba(140,13,84,.35))}
+.zpin svg{width:100%;height:100%;display:block}
+@keyframes zpin-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@media(prefers-reduced-motion:reduce){.zpin{animation:none}}
+
+/* Secondary pin — small dot + always-visible label pill */
+.zpin-2{display:flex;align-items:center;gap:8px;white-space:nowrap;transform:translate(-50%,-50%);pointer-events:none}
+.zpin-2-dot{width:12px;height:12px;border-radius:50%;background:var(--magenta);border:2px solid #fff;box-shadow:0 2px 6px rgba(140,13,84,.35);flex-shrink:0}
+.zpin-2-label{background:#fff;color:var(--magenta);font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:999px;box-shadow:0 3px 10px rgba(140,13,84,.15);letter-spacing:.02em}
+html[dir="rtl"] .zpin-2-label{font-weight:700}
+
+@media(max-width:880px){
+  .findus{padding:56px 0}
+  .findus-grid{grid-template-columns:1fr;gap:28px}
+  .findus-map-panel{height:340px;order:2}
+  .findus-copy{order:1}
+  .findus-benefits{margin:18px 0 22px}
+}
+@media(max-width:520px){
+  .findus-map-panel{height:320px;border-radius:18px}
+  .findus-copy h2{font-size:1.6rem}
+  .findus-benefits li{font-size:.88rem}
+}
+
 /* ── Splash intro ── */
 .splash{position:fixed;inset:0;z-index:200;
   /* Rich pink vignette — near-white pink centre through soft blush to deeper rose edge.
@@ -658,6 +719,45 @@ html[dir="rtl"] .splash-hint-txt{letter-spacing:0;text-transform:none;font-size:
     <div class="wrap"><h2 id="aboutTitle"></h2><p data-t="aboutP"></p></div>
   </section>
 
+  <section class="findus" id="findus">
+    <div class="wrap findus-grid">
+      <div class="findus-copy">
+        <span class="findus-eyebrow" data-t="findusEyebrow">Visit us</span>
+        <h2 id="findusTitle"></h2>
+        <ul class="findus-benefits">
+          <li>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="4" y="6" width="16" height="14" rx="2"/><path d="M8 6V4M16 6V4M4 10h16"/></svg>
+            <span data-t="findusB1">Open daily · come browse in person</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            <span data-t="findusB2">In the heart of Sahet Al Chouhadaa, next to Zero 3 &amp; Kassir Sweets</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 17h4l1-3h6l1 3h4"/><path d="M6 14l1.5-6h9L18 14"/><circle cx="8" cy="19" r="1.5"/><circle cx="16" cy="19" r="1.5"/></svg>
+            <span data-t="findusB3">Easy parking around the square</span>
+          </li>
+        </ul>
+        <a class="btn btn-primary findus-btn" href="https://maps.app.goo.gl/suG6eVxm3RvmktMp8" target="_blank" rel="noopener" data-t="findusBtn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+          <span>Get Directions</span>
+        </a>
+      </div>
+      <div class="findus-map-panel" id="findusPanel">
+        <div class="findus-map-parallax" id="findusParallax">
+          <div id="findusMap" class="findus-map"></div>
+        </div>
+        <div class="findus-map-veil" aria-hidden="true"></div>
+        <div class="findus-map-placeholder" id="findusPlaceholder">
+          <div class="findus-map-placeholder-inner">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            <span>Saida · Sahet Al Chouhadaa</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="contact" id="contact">
     <div class="wrap">
       <div class="contact-card">
@@ -774,6 +874,12 @@ const T = {
   bsTitle:'Our <em>Best Sellers</em>',bsSub:'The pieces our customers keep coming back for.',
   catTitle:'Shop by <em>Category</em>',catSub:'Everything for the table, the kitchen and the home.',
   colTitle:'The <em>Collection</em>',colSub:'Tap a product to see details, or add it straight to your cart.',
+  findusEyebrow:'Visit us',
+  findusTitle:'Find our store in <em>Saida</em>',
+  findusB1:'Open daily · come browse in person',
+  findusB2:'In the heart of Sahet Al Chouhadaa, next to Zero 3 & Kassir Sweets',
+  findusB3:'Easy parking around the square',
+  findusBtn:'Get Directions',
   aboutTitle:'The art of the <em>beautiful home</em>',
   aboutP:'Zeina brings together elegant tableware and refined accessories — from Verona dinner sets and gold cutlery to marble serveware and porcelain décor — so your home always has something worth admiring.',
   conTitle:'Questions?',conP:'Message us on WhatsApp — we reply fast.',conBtn:'Chat on WhatsApp',conPhone:'Phone:',
@@ -798,6 +904,12 @@ const T = {
   bsTitle:'<em>الأكثر مبيعاً</em>',bsSub:'القطع التي يعود إليها زبائننا دائماً.',
   catTitle:'تسوّقي حسب <em>القسم</em>',catSub:'كل ما يلزم للسفرة والمطبخ والمنزل.',
   colTitle:'<em>المجموعة</em> الكاملة',colSub:'اضغطي على المنتج للتفاصيل أو أضيفيه مباشرة للسلة.',
+  findusEyebrow:'زورونا',
+  findusTitle:'زوروا محلّنا في <em>صيدا</em>',
+  findusB1:'مفتوح يومياً · تفضّلي لتشوفي القطع عن قرب',
+  findusB2:'في قلب ساحة الشهداء، بجانب Zero 3 وحلويات القصير',
+  findusB3:'مواقف سيارات سهلة حول الساحة',
+  findusBtn:'احصلي على الاتجاهات',
   aboutTitle:'فنّ <em>البيت الجميل</em>',
   aboutP:'تجمع "زينة" بين أدوات المائدة الأنيقة والإكسسوارات الراقية — لتبقى سفرتك وبيتك دائماً بأجمل صورة.',
   conTitle:'عندك سؤال؟',conP:'راسلينا على واتساب — نرد بسرعة.',conBtn:'تواصلي عبر واتساب',conPhone:'الهاتف:',
@@ -1090,6 +1202,7 @@ function renderStatic(){
   document.getElementById('catTitle').innerHTML=t('catTitle');
   document.getElementById('colTitle').innerHTML=t('colTitle');
   document.getElementById('aboutTitle').innerHTML=t('aboutTitle');
+  const ftEl=document.getElementById('findusTitle'); if(ftEl) ftEl.innerHTML=t('findusTitle');
   const wa='https://wa.me/'+WA_NUMBER;
   document.getElementById('waContact').href=wa;
   const waAskTxt = LANG==='ar' ? 'مرحباً زينة! أودّ الاستفسار عن منتج' : "Hi Zeina! I'd like to ask about a product";
@@ -1850,6 +1963,14 @@ function refresh(){
   if(VIEW==='categories')renderCategoriesView();
   if(VIEW==='category')renderCategoryListing(currentCategorySub);
   if(SEARCH_OPEN)renderSearchResults();
+  /* Re-localise the landmark pill labels if the map is already up */
+  document.querySelectorAll('.zpin-2-label').forEach((el,i)=>{
+    const labels = [
+      {en:'Zero 3', ar:'زيرو 3'},
+      {en:'Kassir Sweets', ar:'حلويات القصير'}
+    ];
+    if(labels[i]) el.textContent = LANG==='ar' ? labels[i].ar : labels[i].en;
+  });
   setDocTitle();
 }
 const navEl=document.getElementById('navLinks');
@@ -2394,6 +2515,186 @@ function initHeroCoin(){
   heroCoin=S;
 }
 
+/* ── Find Us / Leaflet map (lazy-init, tinted, decorative-only) ── */
+let FINDUS = { map:null, loading:false, loaded:false, parallaxRaf:null, parallaxTarget:0, parallaxCurrent:0 };
+
+function loadLeafletOnce(){
+  if(window.L) return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    /* CSS first so the tile pane is sized correctly by the time the JS runs */
+    if(!document.querySelector('link[data-leaflet]')){
+      const link=document.createElement('link');
+      link.rel='stylesheet';
+      link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.crossOrigin='';
+      link.dataset.leaflet='1';
+      document.head.appendChild(link);
+    }
+    const s=document.createElement('script');
+    s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    s.crossOrigin='';
+    s.async=true;
+    s.onload=()=>resolve();
+    s.onerror=()=>reject(new Error('Leaflet failed to load'));
+    document.head.appendChild(s);
+  });
+}
+
+function initFindUs(){
+  if(FINDUS.loaded || FINDUS.loading) return;
+  FINDUS.loading = true;
+  loadLeafletOnce().then(()=>{
+    try{
+      const mapEl=document.getElementById('findusMap');
+      const placeholder=document.getElementById('findusPlaceholder');
+      if(!mapEl || !window.L){ FINDUS.loading=false; return; }
+
+      const STORE = [33.5576, 35.3743];
+      const map = L.map(mapEl, {
+        center: STORE,
+        zoom: 17,
+        zoomSnap: 0.25,
+        zoomControl: false,
+        attributionControl: true,
+        /* Decorative — no user interactions. Directions button is the way out. */
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        dragging: false,
+        touchZoom: false,
+        tap: false
+      });
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        subdomains:'abcd',
+        maxZoom:20,
+        attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> · &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      }).addTo(map);
+
+      /* ── Main store pin: magenta teardrop, gold ring, tiny white Z ── */
+      const mainSvg = `
+        <div class="zpin" aria-hidden="true">
+          <svg viewBox="0 0 44 60" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="zpg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#D0288C"/>
+                <stop offset="100%" stop-color="#8C0D54"/>
+              </linearGradient>
+            </defs>
+            <path d="M22 0 C10 0 0 10 0 22 C0 38 22 60 22 60 C22 60 44 38 44 22 C44 10 34 0 22 0 Z" fill="url(#zpg)"/>
+            <circle cx="22" cy="22" r="14" fill="none" stroke="#C29A4B" stroke-width="1.6" opacity=".85"/>
+            <circle cx="22" cy="22" r="10.5" fill="#fff"/>
+            <text x="22" y="28" text-anchor="middle" font-family="Georgia, 'Cormorant Garamond', serif" font-size="17" font-style="italic" font-weight="600" fill="#BA1270">Z</text>
+          </svg>
+        </div>`;
+      L.marker(STORE, {
+        icon: L.divIcon({
+          className:'zpin-wrap',
+          html: mainSvg,
+          iconSize:[44,60],
+          iconAnchor:[22,60]
+        }),
+        interactive:false,
+        keyboard:false
+      }).addTo(map);
+
+      /* ── Secondary landmark pins with always-visible pill labels ── */
+      const landmarks = [
+        { pos:[33.55724, 35.37362], en:'Zero 3',        ar:'زيرو 3' },
+        { pos:[33.55791, 35.37493], en:'Kassir Sweets', ar:'حلويات القصير' }
+      ];
+      landmarks.forEach(lm=>{
+        const label = LANG==='ar' ? lm.ar : lm.en;
+        L.marker(lm.pos, {
+          icon: L.divIcon({
+            className:'zpin-2-wrap',
+            html:`<div class="zpin-2" dir="${LANG==='ar'?'rtl':'ltr'}"><span class="zpin-2-dot"></span><span class="zpin-2-label">${label}</span></div>`,
+            iconSize:[1,1],
+            iconAnchor:[0,0]
+          }),
+          interactive:false,
+          keyboard:false
+        }).addTo(map);
+      });
+
+      FINDUS.map = map;
+      FINDUS.loaded = true;
+      FINDUS.loading = false;
+      /* Ensure Leaflet knows the container size after our overlays + parallax settle. */
+      setTimeout(()=>{ try{ map.invalidateSize(); }catch(_){} }, 60);
+      requestAnimationFrame(()=>{ if(placeholder) placeholder.classList.add('hidden'); });
+
+      /* Parallax — only if not reduced-motion and viewport is tall enough */
+      const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+      if(!reduced && window.innerHeight >= 560){ startFindUsParallax(); }
+      else{ document.getElementById('findusParallax')?.classList.add('no-parallax'); }
+    }catch(e){
+      console.warn('[Zeina] Find Us map init failed', e);
+      FINDUS.loading = false;
+    }
+  }).catch(e=>{
+    console.warn('[Zeina] Leaflet load failed — map stays as placeholder', e);
+    FINDUS.loading = false;
+  });
+}
+
+function startFindUsParallax(){
+  const panel = document.getElementById('findusPanel');
+  const wrap = document.getElementById('findusParallax');
+  if(!panel || !wrap) return;
+  const MAX = 40;  /* px — matches the -40 top/bottom overhang so edges never show */
+  const STRENGTH = 0.18;
+  let ticking = false;
+  const tick = ()=>{
+    ticking = false;
+    const rect = panel.getBoundingClientRect();
+    const vh = window.innerHeight || 800;
+    /* -1 when panel bottom sits at viewport top, +1 when panel top sits at viewport bottom */
+    const centerOffset = (rect.top + rect.height/2 - vh/2) / vh;
+    const dy = Math.max(-MAX, Math.min(MAX, -centerOffset * vh * STRENGTH));
+    /* rAF-smoothed for extra silkiness on wheel scrolls */
+    FINDUS.parallaxTarget = dy;
+  };
+  const raf = ()=>{
+    const t = FINDUS.parallaxTarget;
+    const c = FINDUS.parallaxCurrent;
+    const next = c + (t - c) * 0.18;
+    if(Math.abs(next - c) > 0.05){
+      FINDUS.parallaxCurrent = next;
+      wrap.style.transform = 'translate3d(0,' + next.toFixed(2) + 'px,0)';
+    } else if(next !== c){
+      FINDUS.parallaxCurrent = t;
+      wrap.style.transform = 'translate3d(0,' + t.toFixed(2) + 'px,0)';
+    }
+    FINDUS.parallaxRaf = requestAnimationFrame(raf);
+  };
+  window.addEventListener('scroll', ()=>{
+    if(!ticking){ ticking = true; requestAnimationFrame(tick); }
+  }, {passive:true});
+  window.addEventListener('resize', tick);
+  tick();
+  FINDUS.parallaxRaf = requestAnimationFrame(raf);
+}
+
+/* Trigger init when the section approaches the viewport */
+function armFindUsObserver(){
+  const panel = document.getElementById('findusPanel');
+  if(!panel || !('IntersectionObserver' in window)){
+    /* Fallback: eager init after a small delay */
+    setTimeout(initFindUs, 800);
+    return;
+  }
+  const io = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        initFindUs();
+        io.disconnect();
+      }
+    });
+  }, { rootMargin: '400px 0px' });   /* start loading before it's actually in view */
+  io.observe(panel);
+}
+
 /* ── Splash intro (once per session, swipe-up dismiss) ── */
 const SPLASH_TXT={en:{hint:'Swipe up',enter:'Enter'},ar:{hint:'اسحب للأعلى',enter:'ادخل'}};
 function localizeSplash(){
@@ -2535,6 +2836,7 @@ function initSplash(){
      wheel / keydown listeners always attach — even if every downstream step
      throws, the splash stays dismissible and the user isn't stranded. */
   try { initSplash(); } catch(e){ console.error('[Zeina] initSplash failed', e); }
+  try { armFindUsObserver(); } catch(e){ console.warn('[Zeina] Find Us observer failed', e); }
 
   /* Everything after this point is wrapped in one try/catch: any thrown
      error surfaces in the console but never freezes the site. Individual
