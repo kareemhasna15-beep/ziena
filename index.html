@@ -166,10 +166,11 @@ html[dir="rtl"] .hero h1 .script{font-family:'Tajawal',sans-serif;font-size:1em;
 .coin.pressed{filter:brightness(.96)}
 .coin-face{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0%,var(--blush) 45%,var(--blush-2) 100%);border:1px solid var(--gold-soft);box-shadow:var(--shadow),inset 0 0 0 20px #fff,inset 0 0 0 22px var(--gold-soft);display:flex;align-items:center;justify-content:center;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .coin-back{transform:rotateY(180deg)}
-.coin-face img{max-width:64%;max-height:64%;width:auto;height:auto;object-fit:contain;-webkit-user-drag:none;user-drag:none;pointer-events:none;filter:drop-shadow(0 8px 18px rgba(140,13,84,.18));transition:opacity .35s ease}
+.coin-face img{width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;object-position:center;-webkit-user-drag:none;user-drag:none;pointer-events:none;transition:opacity .35s ease}
 .coin-face.crossfading img.next{position:absolute;inset:0;margin:auto;opacity:0}
-.coin-label{position:absolute;bottom:-42px;left:0;right:0;text-align:center;font-family:'Cormorant Garamond',serif;color:var(--plum);font-size:1.12rem;letter-spacing:.02em;padding:0 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.92;transition:opacity .3s ease}
-html[dir="rtl"] .coin-label{font-family:'Tajawal',sans-serif;font-weight:600;font-size:1rem}
+.coin-face.placeholder-icon img{width:auto;height:auto;max-width:56%;max-height:56%;object-fit:contain;filter:drop-shadow(0 8px 18px rgba(140,13,84,.18))}
+.coin-label{position:absolute;bottom:-46px;left:50%;transform:translateX(-50%);max-width:min(340px,88%);text-align:center;font-family:'Cormorant Garamond',serif;color:var(--plum);font-size:1.05rem;letter-spacing:.02em;padding:6px 16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:linear-gradient(180deg,rgba(255,255,255,.6),rgba(255,255,255,.85));border-radius:999px;box-shadow:0 4px 14px rgba(140,13,84,.08);backdrop-filter:blur(6px)}
+html[dir="rtl"] .coin-label{font-family:'Tajawal',sans-serif;font-weight:600;font-size:.95rem}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
 @media(prefers-reduced-motion:reduce){.coin-wrap{animation:none}}
 
@@ -209,6 +210,14 @@ html[dir="rtl"] .bs-rank{letter-spacing:0}
 
 /* ── Catalog ── */
 .catalog{background:linear-gradient(180deg,var(--blush) 0%,#fff 30%)}
+.collection-search{max-width:520px;margin:0 auto 20px;display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--blush-2);border-radius:999px;padding:8px 16px;transition:.2s}
+.collection-search:focus-within{border-color:var(--magenta);box-shadow:0 6px 20px rgba(186,18,112,.08)}
+.collection-search .cs-icon{color:var(--ink-soft);flex-shrink:0}
+.collection-search input{flex:1;min-width:0;border:none;background:transparent;font-family:inherit;font-size:.94rem;color:var(--ink);padding:6px 0;outline:none}
+.collection-search input::placeholder{color:var(--ink-soft)}
+.collection-search .cs-clear{border:none;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:1.3rem;line-height:1;padding:0 4px;display:none}
+.collection-search.has-text .cs-clear{display:block}
+.collection-search .cs-clear:hover{color:var(--magenta)}
 .chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:38px}
 .chip{padding:9px 20px;border-radius:999px;border:1.5px solid var(--blush-2);background:#fff;font-size:.84rem;font-weight:500;cursor:pointer;transition:.22s;color:var(--ink-soft)}
 .chip:hover{border-color:var(--magenta);color:var(--magenta)}
@@ -426,7 +435,10 @@ html[dir="rtl"] .cat-tile-inner h3{font-family:'Tajawal',sans-serif;font-weight:
 .search-bar input:focus{outline:none}
 .search-close{background:transparent;border:none;color:var(--ink-soft);cursor:pointer;font-size:1.6rem;line-height:1;padding:4px 10px;transition:.2s}
 .search-close:hover{color:var(--magenta)}
-.search-body{max-width:1180px;margin:0 auto;padding:22px}
+.search-body{width:100%;max-width:1180px;margin:0 auto;padding:22px;align-self:stretch}
+.search-body .prod-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+@media(max-width:960px){.search-body .prod-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){.search-body .prod-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}}
 .search-count{font-size:.82rem;color:var(--ink-soft);margin-bottom:16px;letter-spacing:.02em}
 .search-empty{text-align:center;padding:60px 20px;color:var(--ink-soft)}
 .search-empty h3{font-family:'Cormorant Garamond',serif;color:var(--plum);font-size:1.5rem;margin-bottom:8px}
@@ -596,6 +608,11 @@ html[dir="rtl"] .splash-hint{letter-spacing:0;text-transform:none;font-size:.95r
   <section class="catalog" id="catalog">
     <div class="wrap">
       <div class="sec-head"><h2 id="colTitle"></h2><p data-t="colSub"></p><div class="divider">✦</div></div>
+      <div class="collection-search" id="colSearchWrap">
+        <svg class="cs-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="colSearchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Search the collection…" aria-label="Search the collection">
+        <button type="button" class="cs-clear" id="colSearchClear" aria-label="Clear">×</button>
+      </div>
       <div class="chips" id="chips"></div>
       <div class="prod-grid" id="prodGrid"><div class="loading"><div class="spinner"></div>Loading…</div></div>
     </div>
@@ -764,6 +781,7 @@ const T = {
   all:'All',items:'items',top:'★ Top Seller',best:'Best Seller',addCart:'Add to cart',added:'Added ✓',
   cartTitle:'Your Cart',total:'Total',checkoutBtn:'Checkout',emptyCart:'Your cart is empty.',remove:'Remove',
   similar:'Similar products',alsoBuy:'Customers also buy',backHome:'Home',contactPrice:'Contact for price',
+  colSearchPh:'Search the collection…',noMatch:'No matching products.',
   coTitle:'Checkout',coName:'Full name',coPhone:'Phone number',coAddr:'Delivery address',coNote:'Note (optional)',
   coSummary:'Order summary',coSend:'Place order',coHint:'Cash on delivery — no online payment. We will contact you to confirm.',
   coDone:'Order placed!',doneTitle:'Order received! 🎉',doneNo:'Order number',
@@ -786,6 +804,7 @@ const T = {
   all:'الكل',items:'قطعة',top:'★ الأعلى مبيعاً',best:'الأكثر مبيعاً',addCart:'أضيفي للسلة',added:'أُضيفت ✓',
   cartTitle:'سلة التسوق',total:'المجموع',checkoutBtn:'إتمام الطلب',emptyCart:'السلة فارغة.',remove:'حذف',
   similar:'منتجات مشابهة',alsoBuy:'الزبائن يشترون أيضاً',backHome:'الرئيسية',contactPrice:'اتصل للسعر',
+  colSearchPh:'ابحث في المجموعة…',noMatch:'لا توجد منتجات مطابقة.',
   coTitle:'إتمام الطلب',coName:'الاسم الكامل',coPhone:'رقم الهاتف',coAddr:'عنوان التوصيل',coNote:'ملاحظة (اختياري)',
   coSummary:'ملخص الطلب',coSend:'تأكيد الطلب',coHint:'الدفع عند الاستلام — لا يوجد دفع إلكتروني. سنتواصل معك للتأكيد.',
   coDone:'تم استلام الطلب!',doneTitle:'تم استلام طلبك! 🎉',doneNo:'رقم الطلب',
@@ -840,6 +859,8 @@ const imgSrc=f=>f?(f.startsWith('http')||f.startsWith('/')||f.startsWith(IMG_BAS
 let DB=[], ORDERS=[], cart=store.get('zeina_cart')||{};
 let LANG='en', CUR='USD', FILTER='all', adminTab='dash', editingId=null, pickedIcon='mug', VIEW='home', SESSION=null;
 let PD_CURRENT=null, PD_VARIANT_IX=0;
+let COLLECTION_SEARCH='';
+let COLLECTION_DEBOUNCE=null;
 const t=k=>T[LANG][k];
 const byId=id=>DB.find(p=>p.id==id);
 const pname=p=>LANG==='en'?p.en:(p.ar||p.en);
@@ -1056,6 +1077,8 @@ function renderStatic(){
   document.documentElement.lang=LANG;
   document.documentElement.dir=LANG==='ar'?'rtl':'ltr';
   document.querySelectorAll('[data-t]').forEach(el=>{el.innerHTML=t(el.dataset.t)});
+  const csI=document.getElementById('colSearchInput');
+  if(csI){ csI.placeholder=t('colSearchPh'); }
   document.getElementById('heroTitle').innerHTML=t('heroTitle');
   document.getElementById('bsTitle').innerHTML=t('bsTitle');
   document.getElementById('catTitle').innerHTML=t('catTitle');
@@ -1237,7 +1260,37 @@ function renderChips(){
 function renderProducts(){
   const grid=document.getElementById('prodGrid');
   if(!DB.length){grid.innerHTML=`<div class="loading">${t('loadFail')}</div>`;return}
-  grid.innerHTML=visibleDB().filter(p=>FILTER==='all'||p.c===FILTER).map(prodCard).join('');
+  const q=COLLECTION_SEARCH.trim();
+  const nq=normalize(q);
+  let items=visibleDB().filter(p=>FILTER==='all'||p.c===FILTER);
+  if(nq){
+    items=items.filter(p=>
+      normalize(p.en).includes(nq) ||
+      normalize(p.ar).includes(nq) ||
+      normalize(p.sku).includes(nq) ||
+      normalize(p.sub).includes(nq) ||
+      normalize(catName(p.sub)).includes(nq)
+    );
+  }
+  if(!items.length){
+    grid.innerHTML=`<div class="loading">${t('noMatch')}</div>`;
+    return;
+  }
+  grid.innerHTML=items.map(p=>nq?prodCardHighlight(p,q):prodCard(p)).join('');
+}
+function prodCardHighlight(p,q){
+  return `
+  <div class="prod" data-c="${p.c}">
+    <div class="prod-art ${p.g}" onclick="go('product',${p.id})">
+      ${p.best?`<span class="tag-best">${t('best')}</span>`:''}
+      ${artInner(p)}
+    </div>
+    <div class="prod-body">
+      <h3 onclick="go('product',${p.id})">${highlight(pname(p),q)}</h3>
+      <span class="price">${fmtPrice(p.p)}</span>
+      <div class="actions">${addBtn(p.id)}</div>
+    </div>
+  </div>`;
 }
 function renderHome(){renderStatic();renderBest();renderCats();renderChips();renderProducts();renderCartBadge();initHeroCoin();}
 
@@ -1692,6 +1745,21 @@ function searchCard(p,q){
 document.getElementById('chips').addEventListener('click',e=>{
   const c=e.target.closest('.chip');if(!c)return;
   FILTER=c.dataset.c;renderChips();renderProducts();
+});
+document.getElementById('colSearchInput').addEventListener('input',e=>{
+  COLLECTION_SEARCH=e.target.value;
+  document.getElementById('colSearchWrap').classList.toggle('has-text', COLLECTION_SEARCH.length>0);
+  clearTimeout(COLLECTION_DEBOUNCE);
+  COLLECTION_DEBOUNCE=setTimeout(()=>{ if(VIEW==='home') renderProducts(); }, 250);
+});
+document.getElementById('colSearchClear').addEventListener('click',()=>{
+  COLLECTION_SEARCH='';
+  const i=document.getElementById('colSearchInput'); i.value=''; i.focus();
+  document.getElementById('colSearchWrap').classList.remove('has-text');
+  if(VIEW==='home') renderProducts();
+});
+document.getElementById('colSearchInput').addEventListener('keydown',e=>{
+  if(e.key==='Escape' && COLLECTION_SEARCH){ e.stopPropagation(); document.getElementById('colSearchClear').click(); }
 });
 document.getElementById('langToggle').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;LANG=b.dataset.lang;
