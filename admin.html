@@ -510,7 +510,11 @@ function render(){
       ${ORDERS.map(o=>`<tr>
         <td>${new Date(o.created_at).toLocaleDateString()}<br><span class="muted">${new Date(o.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span></td>
         <td>${esc(o.name)}<br><span class="muted">${esc(o.phone||'')}</span><br><span class="muted">${esc(o.address||'')}</span>${o.note?`<br><span class="muted">📝 ${esc(o.note)}</span>`:''}</td>
-        <td>${(o.items||[]).map(i=>`${i.qty} × ${esc(i.name)}`).join('<br>')}</td>
+        <td>${(o.items||[]).map(i=>{
+          const tbd = i.tbd===true || i.unit==null;
+          const badge = tbd ? ' <span style="display:inline-block;background:#FEF3C7;color:#92400E;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:999px;letter-spacing:.04em">TBD</span>' : '';
+          return `${i.qty} × ${esc(i.name)}${badge}`;
+        }).join('<br>')}${o.has_tbd_items?'<br><span class="muted" style="font-size:.72rem">(price TBD on '+((o.items||[]).filter(i=>i.tbd===true||i.unit==null).length)+' line)</span>':''}</td>
         <td><b>$${(+o.total).toFixed(2)}</b></td>
         <td><button class="status ${o.status==='new'?'st-new':o.status==='done'?'st-done':'st-cancel'}" onclick="cycleStatus(${o.id},'${o.status}')">${o.status.toUpperCase()}</button></td>
         <td><button class="act del" onclick="delOrder(${o.id})">✕</button></td>
