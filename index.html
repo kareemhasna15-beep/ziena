@@ -48,7 +48,7 @@
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 
 <link href="https://fonts.googleapis.com/css2?family=Parisienne&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500;600&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- LocalBusiness structured data (static — safe to index at first paint) -->
 <script type="application/ld+json">
@@ -731,9 +731,20 @@ const LBP_RATE  = 89500;           // Lira per 1 USD
 const WA_NUMBER = '96181830202';   // store WhatsApp number (Lebanon +961 81 830 202)
 /* ═══════════════════════════════════════════════════════════════ */
 
-const sb = (SUPABASE_URL && SUPABASE_ANON_KEY)
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
+/* Robust client init: guard against the CDN script being absent (blocked, offline,
+   still deferred, whatever) so the inline script never dies with 'createClient of
+   undefined'. If the library isn't there, sb is null and DEMO mode carries the site. */
+let sb = null;
+try {
+  if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase && typeof window.supabase.createClient === 'function') {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } else if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+    console.warn('[Zeina] Supabase SDK unavailable at boot — running in demo/fallback mode.');
+  }
+} catch (e) {
+  console.error('[Zeina] Supabase createClient failed — running in demo/fallback mode.', e);
+  sb = null;
+}
 
 /* ═══ DEMO MODE ═══
    While the Supabase keys above are empty, the site runs on sample data
@@ -2520,21 +2531,35 @@ function initSplash(){
 
 /* ── Boot ── */
 (async function(){
-  initSplash();
-  renderStatic();renderCartBadge();
-  if(sb){
-    const {data}=await sb.auth.getSession();
-    SESSION=data.session||null;
+  /* initSplash MUST run first and is guarded on its own so that its pointer /
+     wheel / keydown listeners always attach — even if every downstream step
+     throws, the splash stays dismissible and the user isn't stranded. */
+  try { initSplash(); } catch(e){ console.error('[Zeina] initSplash failed', e); }
+
+  /* Everything after this point is wrapped in one try/catch: any thrown
+     error surfaces in the console but never freezes the site. Individual
+     steps that touch the network already have their own error handling
+     inside loadProducts / auth. */
+  try {
+    renderStatic();renderCartBadge();
+    if(sb){
+      try {
+        const {data}=await sb.auth.getSession();
+        SESSION=data.session||null;
+      } catch(e){ console.warn('[Zeina] getSession failed', e); }
+    }
+    await loadProducts();
+    const h=location.hash;
+    if(h==='#admin'){window.location.href='./admin.html';return;}
+    if(h.startsWith('#product-')) go('product',h.replace('#product-',''));
+    else if(h==='#checkout') go('checkout');
+    else if(h==='#categories') go('categories');
+    else if(h.startsWith('#category/')){ const raw=subFromSlug(h.replace('#category/','')); if(raw) go('category',raw); else go('categories'); }
+    else if(h==='#search'){ go('home'); openSearch(true); }
+    else go('home');
+  } catch(e){
+    console.error('[Zeina] Boot failed after splash init — splash listeners remain active.', e);
   }
-  await loadProducts();
-  const h=location.hash;
-  if(h==='#admin'){window.location.href='./admin.html';return;}
-  if(h.startsWith('#product-')) go('product',h.replace('#product-',''));
-  else if(h==='#checkout') go('checkout');
-  else if(h==='#categories') go('categories');
-  else if(h.startsWith('#category/')){ const raw=subFromSlug(h.replace('#category/','')); if(raw) go('category',raw); else go('categories'); }
-  else if(h==='#search'){ go('home'); openSearch(true); }
-  else go('home');
 })();
 </script>
 </body>
