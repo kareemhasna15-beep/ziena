@@ -1045,7 +1045,21 @@ const categories=[
 ];
 const alsoMap={dinner:['cutlery','serve','tissue'],coffee:['drink','serve','tissue'],drink:['coffee','serve'],cutlery:['dinner','serve'],serve:['coffee','dinner','kitchen'],kitchen:['serve','decor'],tissue:['decor','serve'],decor:['tissue','serve']};
 const IMG_BASE='website_images/';
-const imgSrc=f=>f?(f.startsWith('http')||f.startsWith('/')||f.startsWith(IMG_BASE)?f:IMG_BASE+f):'';
+/* Canonical image-path resolver. Rules:
+   - http(s):// or data: URL → as-is
+   - contains a "/" (any subpath) → as-is
+   - otherwise → prefix "website_images/" (bare filename in the repo folder)
+   Used at EVERY render surface: rowToProduct, cards, detail, coin, lightbox,
+   drawer, category covers. */
+function resolveImage(v){
+  const s = v==null ? '' : String(v).trim();
+  if(!s) return '';
+  if(/^(https?:)?\/\//i.test(s) || /^data:/i.test(s)) return s;
+  if(s.indexOf('/') !== -1) return s;
+  return IMG_BASE + s;
+}
+/* Back-compat alias — kept so any inline template that still says imgSrc() works. */
+const imgSrc = resolveImage;
 
 /* ── State ── */
 let DB=[], ORDERS=[], cart=store.get('zeina_cart')||{};
@@ -1280,7 +1294,7 @@ function renderDrawer(){
   if(!entries.length){box.innerHTML=`<div class="empty">${t('emptyCart')}</div>`;}
   else box.innerHTML=entries.map(({p,q})=>`
     <div class="c-item">
-      <div class="c-art ${p.g}">${p.img?`<img src="${esc(p.img)}" alt="">`:(icons[p.i]||icons.mug)}</div>
+      <div class="c-art ${p.g}">${p.img?`<img src="${esc(resolveImage(p.img))}" alt="">`:(icons[p.i]||icons.mug)}</div>
       <div class="c-info">
         <h4>${esc(pname(p))}</h4>
         <div class="p">${fmtPrice(p.p)}</div>
@@ -1294,7 +1308,7 @@ function renderDrawer(){
 }
 
 /* ── Cards ── */
-const artInner=p=>p.img?`<img src="${esc(p.img)}" alt="${esc(p.en)}" loading="lazy">`:(icons[p.i]||icons.mug);
+const artInner=p=>p.img?`<img src="${esc(resolveImage(p.img))}" alt="${esc(p.en)}" loading="lazy">`:(icons[p.i]||icons.mug);
 const askBtn=id=>{
   const p=byId(id);
   const nm = p ? (LANG==='ar' ? (p.ar||p.en) : p.en) : '';
@@ -1573,7 +1587,7 @@ function renderProductPage(id){
     <div class="pd-grid" data-primary-id="${p.id}">
       <div class="pd-visual ${p.g}" id="pdVisual" onclick="pdOpenLightbox()">
         ${p.best?`<span class="tag-best" style="top:16px">${p.top?t('top'):t('best')}</span>`:''}
-        <div class="pd-img-wrap">${initialImg?`<img id="pdImg" src="${esc(initialImg)}" alt="${esc(p.en)}" loading="eager">`:(icons[p.i]||icons.mug)}</div>
+        <div class="pd-img-wrap">${initialImg?`<img id="pdImg" src="${esc(resolveImage(initialImg))}" alt="${esc(p.en)}" loading="eager">`:(icons[p.i]||icons.mug)}</div>
       </div>
       <div class="pd-info">
         <h1>${esc(pname(p))}</h1>
@@ -1627,7 +1641,7 @@ function selectVariant(primaryId,ix){
   const wrap=document.querySelector('.pd-img-wrap');
   const targetSrc=v.img||p.img;
   if(!targetSrc){ if(img){img.remove();} wrap.innerHTML=(icons[p.i]||icons.mug); return; }
-  if(!img){ wrap.innerHTML=`<img id="pdImg" src="${esc(targetSrc)}" alt="" loading="eager">`; return; }
+  if(!img){ wrap.innerHTML=`<img id="pdImg" src="${esc(resolveImage(targetSrc))}" alt="" loading="eager">`; return; }
   if(img.getAttribute('src')===targetSrc) return;
   img.classList.add('swap');
   const pre=new Image();
@@ -1690,6 +1704,45 @@ function withTimeout(promise, ms, label){
    Every future task that adds a new orders column MUST list it here. */
 const OPTIONAL_ORDER_FIELDS = ['has_tbd_items','discount_code','discount_code_amount'];
 
+/* ── Site config (Supabase-backed, fail-soft, cached at page load) ──
+   Fetched ONCE by loadSiteConfig() during boot — never inside the checkout
+   submit path. Two contracts:
+     1. A missing table (SQL not yet run) MUST NOT throw — the feature just
+        stays off. Every branch below explicitly swallows sb errors.
+     2. An empty result (no seeded row) means the feature is off. Never a
+        thrown exception in the critical path.
+   New settings/feature flags land on SITE and stay in-memory until reload. */
+const SITE = {
+  storeOpen: true,                 // master switch — false blocks checkout submit
+  storeClosedMessage: '',
+  discountCodesLoaded: false,      // becomes true once we've successfully read the table
+  discountCodesByCode: {}          // { CODE: { code, percent, amount, active, expires_at } }
+};
+async function loadSiteConfig(){
+  if(!sb || DEMO) return;
+  /* site_settings — single-row config. Column names kept generous so a partial
+     migration still hydrates whatever is present. */
+  try {
+    const {data, error} = await sb.from('site_settings').select('*').limit(1).maybeSingle();
+    if(!error && data){
+      if(typeof data.store_open === 'boolean') SITE.storeOpen = data.store_open;
+      if(typeof data.master_switch === 'boolean') SITE.storeOpen = data.master_switch;
+      if(data.store_closed_message) SITE.storeClosedMessage = String(data.store_closed_message);
+    }
+    /* An empty table is not an error — we leave defaults in place. */
+  } catch(e){ console.warn('[site] site_settings unavailable, using defaults', e); }
+  /* discount_codes — cached lookup for Task 24. Missing table stays fail-soft. */
+  try {
+    const {data, error} = await sb.from('discount_codes').select('*');
+    if(!error && Array.isArray(data)){
+      const map = {};
+      data.forEach(r => { if(r && r.code) map[String(r.code).trim().toUpperCase()] = r; });
+      SITE.discountCodesByCode = map;
+      SITE.discountCodesLoaded = true;
+    }
+  } catch(e){ console.warn('[site] discount_codes unavailable, promo entry disabled', e); }
+}
+
 /* Match against Postgrest's schema-cache error surface. Recognise:
      - err.code === 'PGRST204'
      - message: 'Could not find the "X" column of ...'
@@ -1701,86 +1754,110 @@ function isSchemaLagError(err){
   return /could not find.*column|schema cache/i.test(msg);
 }
 async function sendOrder(){
-  const name=document.getElementById('coName').value.trim();
-  const phone=document.getElementById('coPhone').value.trim();
-  const addr=document.getElementById('coAddr').value.trim();
-  const note=document.getElementById('coNote').value.trim();
-  if(!name||!phone||!addr){toast(t('toastNeed'));return}
-  const btn=document.getElementById('coSendBtn');
-  if(btn.dataset.sending==='1') return;                     // guard against double-submit
-  btn.dataset.sending='1';
-  btn.disabled=true;
-  const originalLabel=btn.innerHTML;
-  btn.innerHTML=`<span class="btn-spin" aria-hidden="true"></span> ${t('coSending')}`;
+  /* Every non-trivial expression below runs under a labeled step. If ANY step
+     throws, the catch surfaces the step label so the crash line is obvious in
+     the console AND in admin_error_log — never a silent 'checkout failed'. */
+  let step = 'read_form';
   const errBox=document.getElementById('coErr');
   if(errBox) errBox.innerHTML='';
+  let btn = null;
+  let originalLabel = '';
+  try {
+    /* -------- read_form -------- */
+    const nameEl=document.getElementById('coName');
+    const phoneEl=document.getElementById('coPhone');
+    const addrEl=document.getElementById('coAddr');
+    const noteEl=document.getElementById('coNote');
+    const name=(nameEl&&nameEl.value||'').trim();
+    const phone=(phoneEl&&phoneEl.value||'').trim();
+    const addr=(addrEl&&addrEl.value||'').trim();
+    const note=(noteEl&&noteEl.value||'').trim();
+    if(!name||!phone||!addr){ toast(t('toastNeed')); return; }
 
-  const entries=Object.entries(cart).map(([id,q])=>({p:byId(id),q})).filter(x=>x.p);
-
-  /* Build items array. CRITICAL:
-     - For priced products: unit is a finite number (never NaN).
-     - For TBD ('Contact for price') products: unit AND line are explicit
-       null and tbd:true. Serialising null to JSON yields null (valid);
-       NaN would serialise to null too but downstream code would carry
-       NaN through arithmetic and blow up the .total column (was error
-       23502). */
-  const items = entries.map(({p,q}) => {
-    const priced = hasPrice(p.p);
-    if(!priced){
-      return { pid:p.id, sku:p.sku||'', name:p.en, qty:q, unit:null, line:null, tbd:true };
+    /* -------- master_switch (fail-soft, no DB read here — SITE was warmed at boot) -------- */
+    step = 'master_switch';
+    if(SITE && SITE.storeOpen === false){
+      const msg = SITE.storeClosedMessage || t('coErrGeneric');
+      if(errBox){
+        errBox.innerHTML=`<div class="checkout-err"><span>⚠ ${esc(msg)}</span></div>`;
+      } else toast(msg);
+      return;
     }
-    const discPct = activeDiscount(p);
-    const eff = effectivePrice(p);
-    const origUnit = +priceVal(+p.p).toFixed(2);
-    const unit = +priceVal(+eff).toFixed(2);
-    const item = {
-      pid:p.id, sku:p.sku||'', name:p.en, qty:q,
-      unit, line: +(unit*q).toFixed(2), tbd:false
+
+    /* -------- lock_button -------- */
+    step = 'lock_button';
+    btn=document.getElementById('coSendBtn');
+    if(!btn){ toast(t('coErrGeneric')); return; }
+    if(btn.dataset.sending==='1') return;
+    btn.dataset.sending='1';
+    btn.disabled=true;
+    originalLabel=btn.innerHTML;
+    btn.innerHTML=`<span class="btn-spin" aria-hidden="true"></span> ${t('coSending')}`;
+
+    /* -------- build_items -------- */
+    step = 'build_items';
+    const entries=Object.entries(cart).map(([id,q])=>({p:byId(id),q})).filter(x=>x.p);
+    /* CRITICAL:
+       - Priced products: unit is a finite number (never NaN).
+       - TBD ('Contact for price') products: unit AND line are explicit null
+         and tbd:true. Downstream JSON.stringify(null) → null (valid); NaN
+         would blow up the .total column (was Postgres error 23502). */
+    const items = entries.map(({p,q}) => {
+      const priced = hasPrice(p.p);
+      if(!priced){
+        return { pid:p.id, sku:p.sku||'', name:p.en, qty:q, unit:null, line:null, tbd:true };
+      }
+      const discPct = activeDiscount(p);
+      const effRaw = effectivePrice(p);
+      const eff = (effRaw==null || !isFinite(+effRaw)) ? +p.p : +effRaw;
+      const origUnit = +priceVal(+p.p).toFixed(2);
+      const unit = +priceVal(eff).toFixed(2);
+      const item = {
+        pid:p.id, sku:p.sku||'', name:p.en, qty:q,
+        unit, line: +(unit*q).toFixed(2), tbd:false
+      };
+      if(discPct > 0){
+        item.original_unit = origUnit;
+        item.original_line = +(origUnit*q).toFixed(2);
+        item.discount_percent = discPct;
+      }
+      return item;
+    });
+
+    /* -------- build_totals -------- */
+    step = 'build_totals';
+    const rawTotal = cartTotal();
+    const total = Number.isFinite(rawTotal) ? +rawTotal.toFixed(2) : 0;
+    const totalTxt = fmtPriceTotal();
+    const currency = CUR;
+    const tbdCount = items.filter(i => i.tbd).length;
+    const pricedCount = items.filter(i => !i.tbd).length;
+
+    /* -------- build_payload -------- */
+    step = 'build_payload';
+    const orderPayload = {
+      name, phone, address: addr, note,
+      items,
+      total,
+      has_tbd_items: tbdCount > 0,
+      status: 'new'
     };
-    if(discPct > 0){
-      item.original_unit = origUnit;
-      item.original_line = +(origUnit*q).toFixed(2);
-      item.discount_percent = discPct;
-    }
-    return item;
-  });
 
-  /* Total = sum of PRICED lines only. cartTotal() already excludes null-
-     price entries, so it's always a finite number (0 if all TBD). */
-  const rawTotal = cartTotal();
-  const total = Number.isFinite(rawTotal) ? +rawTotal.toFixed(2) : 0;
-  const totalTxt = fmtPriceTotal();
-  const currency = CUR;
-  const tbdCount = items.filter(i => i.tbd).length;
-  const pricedCount = items.filter(i => !i.tbd).length;
-
-  const orderPayload = {
-    name, phone, address: addr, note,
-    items,
-    total,
-    has_tbd_items: tbdCount > 0,
-    status: 'new'
-  };
-
-  const t0=performance.now();
-  let orderId;
-  try{
+    /* -------- insert_order (network) -------- */
+    step = 'insert_order';
+    const t0=performance.now();
+    let orderId;
     if(DEMO){
       orderId=++demoIdSeq;
       demoOrders.unshift({id:orderId,created_at:new Date().toISOString(),...orderPayload});
     } else {
-      /* Critical path: single lightweight INSERT with a small return payload + 15s timeout.
-         .select('id') keeps the response tiny. */
       const attempt = payload => withTimeout(
         sb.from('orders').insert(payload).select('id').single(),
         15000, t('coTimeout')
       );
       let result = await attempt(orderPayload);
       if(result.error && isSchemaLagError(result.error)){
-        /* Schema lag — the DB is behind the client. Strip the optional new
-           fields and retry once so the customer's order still lands. Log the
-           first-attempt error to admin_error_log so the admin sees which
-           migration is pending. */
+        step = 'insert_order_retry';
         const stripped = { ...orderPayload };
         const droppedFields = [];
         OPTIONAL_ORDER_FIELDS.forEach(k => {
@@ -1803,30 +1880,55 @@ async function sendOrder(){
       if(result.error) throw result.error;
       orderId = result.data.id;
     }
+    const perfMs=Math.round(performance.now()-t0);
+    console.log('[checkout] order insert '+perfMs+'ms · total '+total+' · items '+items.length+' ('+tbdCount+' TBD)');
+
+    /* -------- confirmation (post-insert; failure here does NOT roll back the order) -------- */
+    step = 'confirmation';
+    let msg=t('waOrder');
+    entries.forEach(({p,q})=>{
+      if(hasPrice(p.p)){
+        msg += `• ${q} × ${p.en} — $${(priceVal(+p.p)*q).toFixed(2)}%0A`;
+      } else {
+        msg += `• ${q} × ${p.en} — ${t('tbdShort')}%0A`;
+      }
+    });
+    msg+=`%0A${t('waTotal')}: ${totalTxt}%0A${t('waName')}: ${encodeURIComponent(name)}%0A${t('waPhone')}: ${encodeURIComponent(phone)}%0A${t('waAddr')}: ${encodeURIComponent(addr)}`;
+    if(note)msg+=`%0A${t('waNote')}: ${encodeURIComponent(note)}`;
+    cart={};saveCart();renderCartBadge();
+    renderOrderDone(orderId,entries,totalTxt,msg);
+    window.scrollTo({top:0});
+
+    /* Fire-and-forget notifications (not in critical path). */
+    step = 'email_dispatch';
+    setTimeout(()=>sendOrderEmail(orderId, orderPayload, totalTxt, currency, {tbdCount, pricedCount}).catch(e=>console.warn('email failed',e)), 0);
+    return;
   } catch(err){
-    /* Log the REAL Supabase error to console AND to admin_error_log so the
-       next bug isn't disguised as a connection problem. */
     const isTimeout = !!(err && err.message && /timeout/i.test(err.message));
     const code = (err && (err.code || err.status)) || '';
     const msgDetail = (err && err.message) || String(err);
-    console.error('[checkout] order insert failed', {code, message: msgDetail, hint: err && err.hint, details: err && err.details});
+    /* Loud, structured console log. `step` names the exact phase that threw
+       — read_form / master_switch / lock_button / build_items /
+       build_totals / build_payload / insert_order / insert_order_retry /
+       confirmation / email_dispatch. */
+    console.error('[checkout] failed at step="'+step+'"', {
+      code, message: msgDetail,
+      hint: err && err.hint,
+      details: err && err.details,
+      stack: err && err.stack
+    });
     logCheckoutError({
       category:'order_insert',
       code: String(code || ''),
-      message: msgDetail,
+      message: '[step='+step+'] '+msgDetail,
       hint: (err && err.hint) || null,
-      details: (err && err.details) || null,
-      hasTbd: tbdCount > 0,
-      itemCount: items.length,
-      pricedCount, tbdCount,
-      total,
-      customerName: name,
-      customerPhone: phone
+      details: (err && err.details) || (err && err.stack) || null
     });
-
-    btn.disabled=false;
-    btn.dataset.sending='';
-    btn.innerHTML=originalLabel;
+    if(btn){
+      btn.disabled=false;
+      btn.dataset.sending='';
+      btn.innerHTML=originalLabel;
+    }
     const uiMsg = isTimeout ? t('coTimeout') : t('coErrGeneric');
     if(errBox){
       errBox.innerHTML=`<div class="checkout-err">
@@ -1836,26 +1938,6 @@ async function sendOrder(){
     } else toast(uiMsg);
     return;
   }
-  const perfMs=Math.round(performance.now()-t0);
-  console.log('[checkout] order insert '+perfMs+'ms · total '+total+' · items '+items.length+' ('+tbdCount+' TBD)');
-
-  /* Build WhatsApp confirmation message. TBD lines show 'Price TBD' instead of a $ amount. */
-  let msg=t('waOrder');
-  entries.forEach(({p,q})=>{
-    if(hasPrice(p.p)){
-      msg += `• ${q} × ${p.en} — $${(priceVal(+p.p)*q).toFixed(2)}%0A`;
-    } else {
-      msg += `• ${q} × ${p.en} — ${t('tbdShort')}%0A`;
-    }
-  });
-  msg+=`%0A${t('waTotal')}: ${totalTxt}%0A${t('waName')}: ${encodeURIComponent(name)}%0A${t('waPhone')}: ${encodeURIComponent(phone)}%0A${t('waAddr')}: ${encodeURIComponent(addr)}`;
-  if(note)msg+=`%0A${t('waNote')}: ${encodeURIComponent(note)}`;
-  cart={};saveCart();renderCartBadge();
-  renderOrderDone(orderId,entries,totalTxt,msg);
-  window.scrollTo({top:0});
-
-  /* Fire-and-forget notifications (not in critical path) */
-  setTimeout(()=>sendOrderEmail(orderId, orderPayload, totalTxt, currency, {tbdCount, pricedCount}).catch(e=>console.warn('email failed',e)), 0);
 }
 
 /* Best-effort logger for real Supabase errors. Writes to admin_error_log
@@ -2136,7 +2218,7 @@ function renderCategoriesView(){
     <div class="cat-browse-grid">
       ${subs.map(r=>`
         <div class="cat-tile ${r.coverImg?'':'no-photo'}" onclick="go('category','${esc(r.sub)}')">
-          ${r.coverImg?`<div class="cat-tile-img" style="background-image:url('${esc(r.coverImg)}')"></div>`:''}
+          ${r.coverImg?`<div class="cat-tile-img" style="background-image:url('${esc(resolveImage(r.coverImg))}')"></div>`:''}
           <div class="cat-tile-overlay"></div>
           <div class="cat-tile-inner">
             <h3>${esc(catName(r.sub))}</h3>
@@ -2493,7 +2575,7 @@ function loadLbImage(i,slideDir){
       }
     };
     img.alt = PD_CURRENT ? (LANG==='ar' ? (PD_CURRENT.ar||PD_CURRENT.en) : PD_CURRENT.en) : '';
-    img.src=src;
+    img.src=resolveImage(src);
   };
   if(slideDir){
     img.classList.add('snap');
@@ -2555,7 +2637,7 @@ function preloadNeighbors(){
   const n=LB.imgs.length; if(n<=1) return;
   const next=LB.imgs[(LB.idx+1)%n];
   const prev=LB.imgs[(LB.idx-1+n)%n];
-  [next,prev].forEach(src=>{ const im=new Image(); im.src=src; });
+  [next,prev].forEach(src=>{ const im=new Image(); im.src=resolveImage(src); });
 }
 function lbGoto(delta,animate){
   if(LB.imgs.length<=1) return;
@@ -2751,7 +2833,7 @@ function initHeroCoin(){
     lastFrame:performance.now(), raf:0, dead:false, lastFrontVisible:true,
     crossfadeTimer:null
   };
-  const setImg=(el,item)=>{ el.src=item.img||''; el.alt=item.en||''; };
+  const setImg=(el,item)=>{ el.src=resolveImage(item.img); el.alt=item.en||''; };
   setImg(frontImg,items[S.frontIdx]);
   setImg(backImg,items[S.backIdx]);
   updateLabel();
@@ -2767,7 +2849,7 @@ function initHeroCoin(){
   function preload(idx){
     const i=(idx%items.length+items.length)%items.length;
     const it=items[i]; if(!it||!it.img) return;
-    const im=new Image(); im.src=it.img;
+    const im=new Image(); im.src=resolveImage(it.img);
   }
   function swapHiddenFace(){
     const mod=((S.angle%360)+360)%360;
@@ -3264,6 +3346,10 @@ function initSplash(){
       } catch(e){ console.warn('[Zeina] getSession failed', e); }
     }
     await loadProducts();
+    /* Warm the SITE cache from Supabase in the background. Never blocks
+       render, never throws — a missing table or empty row means the feature
+       is simply off. See loadSiteConfig for the exact fail-soft rules. */
+    loadSiteConfig();
     const h=location.hash;
     if(h==='#admin'){window.location.href='./admin.html';return;}
     if(h.startsWith('#product-')) go('product',h.replace('#product-',''));

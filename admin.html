@@ -260,7 +260,20 @@ const categories=[
  {id:'tissue',en:'Tissue Boxes'},{id:'decor',en:'Home Décor'},
 ];
 const IMG_BASE='website_images/';
-const imgSrc=f=>f?(f.startsWith('http')||f.startsWith('/')||f.startsWith(IMG_BASE)?f:IMG_BASE+f):'';
+/* Canonical image-path resolver — same rules as the storefront's resolveImage:
+   - http(s):// or data: URL → as-is
+   - contains a "/" → as-is
+   - otherwise → prefix "website_images/"
+   Used at every admin thumbnail render surface. */
+function resolveImage(v){
+  const s = v==null ? '' : String(v).trim();
+  if(!s) return '';
+  if(/^(https?:)?\/\//i.test(s) || /^data:/i.test(s)) return s;
+  if(s.indexOf('/') !== -1) return s;
+  return IMG_BASE + s;
+}
+/* Back-compat aliases so existing sites don't break. */
+const imgSrc = resolveImage;
 const parseImages=raw=>String(raw||'').split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
 const productImages=p=>Array.isArray(p.images)?p.images:(p.image_url?[p.image_url]:[]);
 const cname=id=>{const c=categories.find(c=>c.id===id);return c?c.en:id};
@@ -284,14 +297,7 @@ let editImages=[];
 let dragImgIx=-1;
 
 const IMG_BASE_ADMIN='website_images/';
-const asImgUrl=f=>{
-  if(!f) return '';
-  const s=String(f).trim();
-  if(!s) return '';
-  if(/^(https?:\/\/|\/|data:)/i.test(s)) return s;
-  if(s.startsWith(IMG_BASE_ADMIN)) return s;
-  return IMG_BASE_ADMIN+s;
-};
+const asImgUrl = resolveImage;
 const app=document.getElementById('app');
 let toastTimer;
 function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');
@@ -794,7 +800,7 @@ function paintImgManager(){
     <div class="img-tile" draggable="true" data-ix="${i}"
       ondragstart="imgDragStart(event,${i})" ondragover="imgDragOver(event,${i})"
       ondragleave="imgDragLeave(event,${i})" ondrop="imgDrop(event,${i})" ondragend="imgDragEnd(event)">
-      <img src="${esc(asImgUrl(src))}" alt="" loading="lazy">
+      <img src="${esc(resolveImage(src))}" alt="" loading="lazy">
       ${i===0?'<span class="badge-main">MAIN</span>':''}
       <button type="button" class="rm" title="Remove" onclick="removeEditImage(${i})">×</button>
     </div>`).join('')+`
@@ -904,7 +910,7 @@ function reviewCardHtml(r){
   const catSel = categories.map(c=>`<option value="${c.id}" ${r.category===c.id?'selected':''}>${c.en}</option>`).join('');
   return `
   <div class="review-card ${r.mode||'new'} ${r.status==='confirmed'?'done':''} ${r.status==='skipped'?'skipped':''}" data-rid="${r.rid}">
-    <div class="review-thumb ${r.imgPreview?'':'no-photo'}">${r.imgPreview?`<img src="${esc(r.imgPreview)}" alt="">`:''}</div>
+    <div class="review-thumb ${r.imgPreview?'':'no-photo'}">${r.imgPreview?`<img src="${esc(resolveImage(r.imgPreview))}" alt="">`:''}</div>
     <div>
       <span class="review-badge ${badge}">${label}</span>
       ${r.mode==='update' && r.existing ? `
@@ -1355,7 +1361,7 @@ function renderPhotoSlot(i){
       ondragstart="slotDragStart(event,${i})" ondragover="slotDragOver(event,${i})"
       ondragleave="slotDragLeave(event)" ondrop="slotDrop(event,${i})" ondragend="slotDragEnd(event)"
       onclick="pickSlotUpload(${i})">
-      <img src="${esc(asImgUrl(src))}" alt="">
+      <img src="${esc(resolveImage(src))}" alt="">
       ${isMain?'<span class="badge">MAIN</span>':''}
       ${sizeBadge}
       <button type="button" class="rm" onclick="event.stopPropagation();removeSlot(${i})" title="Remove">×</button>
