@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zeina — Home &amp; Kitchen Accessories | Tripoli, Lebanon</title>
-<meta name="description" content="Zeina — Home &amp; Kitchen Accessories in Tripoli, Lebanon. Fine dinnerware, gold cutlery, coffee &amp; tea sets, luxury tissue boxes, storage jars, trays, and refined décor. Cash on delivery across Lebanon.">
-<meta name="keywords" content="Zeina, home accessories, kitchen accessories, dinnerware, cutlery, coffee sets, tissue boxes, decor, Tripoli, Lebanon, Beirut, ملحقات منزلية, ملحقات مطبخ, لبنان">
+<title>Zeina — Home &amp; Kitchen Accessories | Saida (Sidon), Lebanon</title>
+<meta name="description" content="Zeina — Home &amp; Kitchen Accessories in Saida (Sidon), Lebanon. Fine dinnerware, gold cutlery, coffee &amp; tea sets, luxury tissue boxes, storage jars, trays, and refined décor. Cash on delivery across Lebanon.">
+<meta name="keywords" content="Zeina, home accessories, kitchen accessories, dinnerware, cutlery, coffee sets, tissue boxes, decor, Saida, Sidon, Lebanon, Beirut, ملحقات منزلية, ملحقات مطبخ, صيدا, لبنان">
 <meta name="author" content="Zeina Home & Kitchen">
 <meta name="theme-color" content="#BA1270">
 <link rel="canonical" href="https://kareemhasna15-beep.github.io/ziena/">
@@ -16,7 +16,7 @@
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Zeina — Home &amp; Kitchen Accessories">
-<meta property="og:title" content="Zeina — Home &amp; Kitchen Accessories | Tripoli, Lebanon">
+<meta property="og:title" content="Zeina — Home &amp; Kitchen Accessories | Saida (Sidon), Lebanon">
 <meta property="og:description" content="Fine dinnerware, gold cutlery, coffee &amp; tea sets, tissue boxes and elegant décor. Cash on delivery across Lebanon.">
 <meta property="og:url" content="https://kareemhasna15-beep.github.io/ziena/">
 <meta property="og:image" content="https://kareemhasna15-beep.github.io/ziena/assets/zeina-logo-full.png">
@@ -70,7 +70,7 @@
   "address": {
     "@type": "PostalAddress",
     "addressCountry": "LB",
-    "addressLocality": "Tripoli"
+    "addressLocality": "Saida"
   },
   "sameAs": [
     "https://wa.me/96181830202"
@@ -465,6 +465,12 @@ html[dir="rtl"] .cat-tile-inner h3{font-family:'Tajawal',sans-serif;font-weight:
 html[dir="rtl"] .search-empty h3{font-family:'Tajawal',sans-serif;font-weight:700}
 .search-empty a{color:var(--magenta);font-weight:600;border-bottom:1px solid var(--magenta);padding-bottom:1px;cursor:pointer}
 mark.q{background:var(--gold-soft);color:var(--plum);font-weight:600;padding:0 2px;border-radius:3px}
+/* Search overlay: category-suggestion chips row directly under the search bar */
+.search-cats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;align-items:center}
+.search-cats-label{font-size:.72rem;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase;margin-inline-end:4px}
+.search-cat{background:#fff;border:1.5px solid var(--blush-2);color:var(--plum);border-radius:999px;padding:7px 14px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;transition:.18s;line-height:1}
+.search-cat:hover{border-color:var(--magenta);background:var(--blush);color:var(--magenta)}
+html[dir="rtl"] .search-cat{font-family:'Tajawal',sans-serif}
 
 @media(max-width:520px){
   .cats-page,.cat-listing{padding:34px 0 54px}
@@ -2456,11 +2462,17 @@ function renderSearchResults(){
   const body=document.getElementById('searchBody');
   const q=SEARCH_TERM.trim();
   const vis=visibleDB();
+  const nq=normalize(q);
+  /* Category chips row — shown above the product grid. When the query is
+     empty this doubles as a browse shortcut (all categories). When there IS a
+     query, we filter chips by whichever category name (EN or AR) matches. */
+  const chipsHtml = renderSearchCatChips(nq);
   if(!q){
-    body.innerHTML=`<div class="search-count">${LANG==='ar'?`اكتب للبحث في ${vis.length} منتج`:`Start typing to search across ${vis.length} products`}</div>`;
+    body.innerHTML=`
+      ${chipsHtml}
+      <div class="search-count">${LANG==='ar'?`اكتب للبحث في ${vis.length} منتج`:`Start typing to search across ${vis.length} products`}</div>`;
     return;
   }
-  const nq=normalize(q);
   const results=vis.filter(p=>
     normalize(p.en).includes(nq) ||
     normalize(p.ar).includes(nq) ||
@@ -2470,6 +2482,7 @@ function renderSearchResults(){
   );
   if(!results.length){
     body.innerHTML=`
+      ${chipsHtml}
       <div class="search-empty">
         <h3>${LANG==='ar'?'لا توجد منتجات':'No products found'}</h3>
         <p style="margin-top:6px">${LANG==='ar'?'جرّبي كلمة أخرى أو ':'Try a different word or '}
@@ -2481,10 +2494,69 @@ function renderSearchResults(){
     ? `${results.length} ${results.length===1?'نتيجة':'نتيجة'}`
     : `${results.length} ${results.length===1?'result':'results'}`;
   body.innerHTML=`
+    ${chipsHtml}
     <div class="search-count">${countTxt}</div>
     <div class="prod-grid">
       ${results.map(p=>searchCard(p,q)).join('')}
     </div>`;
+}
+/* Build the row of category chips shown at the top of the search overlay.
+   Query is the already-normalized search term (empty string = show all).
+   Chips come from BOTH the coarse `categories` list (EN/AR names) and every
+   sub_category present in the loaded products. Clicking a chip navigates to
+   the matching page:
+     - sub_category chip  → #category/<slug of sub>
+     - coarse category chip → home page filtered by that category id (FILTER).
+   Both close the search overlay first. */
+function renderSearchCatChips(nq){
+  const chips = [];
+  const seen = new Set();
+  /* Coarse categories (dinner, coffee, drink, cutlery, serve, kitchen, tissue,
+     decor) — the eight top-level ones. Filter home page by FILTER on click. */
+  categories.forEach(c=>{
+    const labelEn = c.en;
+    const labelAr = c.ar || c.en;
+    const label = LANG==='ar' ? labelAr : labelEn;
+    if(nq && !(normalize(labelEn).includes(nq) || normalize(labelAr).includes(nq))) return;
+    const key = 'c:' + c.id;
+    if(seen.has(key)) return;
+    seen.add(key);
+    chips.push({ key, label, action: `closeSearch();setCategoryFilter('${esc(c.id)}')` });
+  });
+  /* Sub-categories present in the current visible catalog. Deduplicated by raw
+     value; label uses catName() so the current language wins. */
+  const subs = [...new Set(visibleDB().filter(p=>p.sub).map(p=>p.sub))];
+  subs.forEach(sub=>{
+    const labelEn = sub;
+    const labelAr = (CAT_NAMES[sub] && CAT_NAMES[sub].ar) || sub;
+    const label = LANG==='ar' ? labelAr : labelEn;
+    if(nq && !(normalize(labelEn).includes(nq) || normalize(labelAr).includes(nq))) return;
+    const key = 's:' + sub;
+    if(seen.has(key)) return;
+    seen.add(key);
+    chips.push({ key, label, action: `closeSearch();location.hash='#category/'+'${esc(slug(sub))}'` });
+  });
+  if(!chips.length) return '';
+  /* Cap to a reasonable number so the row doesn't blow up on empty queries. */
+  const MAX_CHIPS = 24;
+  const shown = chips.slice(0, MAX_CHIPS);
+  const label = LANG==='ar' ? 'الأقسام' : 'Categories';
+  return `<div class="search-cats" role="list">
+    <span class="search-cats-label">${label}</span>
+    ${shown.map(c=>`<button type="button" class="search-cat" role="listitem" onclick="${c.action}">${esc(c.label)}</button>`).join('')}
+  </div>`;
+}
+/* Helper for coarse category chips — sets the home-page FILTER and scrolls
+   to the collection section so the user actually sees the filtered result. */
+function setCategoryFilter(cid){
+  FILTER = cid;
+  if(VIEW !== 'home') go('home', 'catalog');
+  else {
+    if(typeof renderChips === 'function') renderChips();
+    if(typeof renderProducts === 'function') renderProducts();
+    const el = document.getElementById('catalog') || document.getElementById('collection');
+    if(el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
 }
 function searchCard(p,q){
   return `
