@@ -194,6 +194,32 @@ tr:hover td{background:#FDF8FB}
 .size-card .hint{font-size:.68rem;color:var(--ink-soft);margin-top:4px}
 .real-variant-notice{background:#FEF3C7;border:1px solid #FDE68A;color:#92400E;border-radius:10px;padding:10px 12px;font-size:.8rem;margin-bottom:12px}
 
+/* Dynamic size rows (Task 26) */
+.size-presets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.size-presets .muted{align-self:center;font-size:.72rem;color:var(--ink-soft);margin-inline-end:4px}
+.size-preset{background:#fff;border:1.5px solid var(--blush-2);color:var(--plum);border-radius:999px;padding:6px 12px;font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;transition:.18s}
+.size-preset:hover{border-color:var(--magenta);color:var(--magenta)}
+.size-rows{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+.size-row{display:grid;grid-template-columns:24px 1fr 1fr 130px auto;gap:8px;align-items:center;padding:10px 12px;border:1.5px solid var(--blush-2);border-radius:12px;background:#fff}
+.size-row.dragging{opacity:.4}
+.size-row.drop-target{outline:2px dashed var(--magenta);outline-offset:-2px}
+.size-row .drag{cursor:grab;color:var(--ink-soft);font-size:1rem;text-align:center;user-select:none;padding:2px}
+.size-row .drag:hover{color:var(--magenta)}
+.size-row input{width:100%;padding:9px 11px;border:1.5px solid var(--blush-2);border-radius:8px;background:#FDFBFC;font-size:.9rem;font-family:inherit}
+.size-row input:focus{outline:none;border-color:var(--magenta)}
+.size-row .rm{background:transparent;border:none;color:var(--ink-soft);font-size:1.1rem;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1}
+.size-row .rm:hover{background:#FEE2E2;color:var(--bad)}
+.size-row .row-hint{grid-column:2/-1;font-size:.68rem;color:var(--ink-soft);margin-top:2px}
+.size-add{background:var(--blush);border:1.5px dashed var(--magenta);color:var(--magenta);border-radius:10px;padding:9px 14px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:.18s;width:100%}
+.size-add:hover{background:var(--blush-2)}
+@media(max-width:640px){
+  .size-row{grid-template-columns:24px 1fr auto;grid-auto-rows:auto;gap:6px}
+  .size-row .size-lbl-en{grid-column:2/3}
+  .size-row .size-lbl-ar{grid-column:2/3}
+  .size-row .size-price{grid-column:2/3}
+  .size-row .rm{grid-column:3/4;grid-row:1/2}
+}
+
 .edit-section{margin-bottom:22px}
 .edit-section h3{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--plum);font-weight:700;margin-bottom:10px;border-bottom:1px solid var(--blush-2);padding-bottom:6px}
 </style>
@@ -1282,13 +1308,59 @@ render=function(){
 let EDIT=null;               // active edit state or null
 let editSlotIx=-1;           // pending upload target
 let editSlotDragIx=-1;       // drag reorder
+/* Legacy fallback labels used only when opening a sz- family whose siblings
+   somehow lack variant_label_en/ar (e.g. very old rows). New families always
+   store the labels the admin typed. */
 const SIZE_LABELS = { S:{en:'Small',ar:'صغير'}, M:{en:'Medium',ar:'وسط'}, L:{en:'Large',ar:'كبير'} };
+const SIZE_PRESETS = [
+  { id:'sml',  labelEn:'S / M / L', rows:[
+      { labelEn:'Small',  labelAr:'صغير' },
+      { labelEn:'Medium', labelAr:'وسط'  },
+      { labelEn:'Large',  labelAr:'كبير' }
+  ]},
+  { id:'vol4', labelEn:'0.5 L / 1 L / 1.5 L / 2 L', rows:[
+      { labelEn:'0.5 L', labelAr:'٠٫٥ لتر' },
+      { labelEn:'1 L',   labelAr:'١ لتر'   },
+      { labelEn:'1.5 L', labelAr:'١٫٥ لتر' },
+      { labelEn:'2 L',   labelAr:'٢ لتر'   }
+  ]}
+];
 const DESC_MAX = 600;
+let editSizeDragIx = -1;
 
 function openEditModal(id){
   const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
   editingId=id;
   const imgs=productImages(p);
+  const isReal = !!p.variant_group && !String(p.variant_group).startsWith('sz-');
+  const siblings = p.variant_group
+    ? PRODUCTS.filter(x=>x.variant_group===p.variant_group)
+        .sort((a,b)=>(a.variant_order||0)-(b.variant_order||0))
+    : [];
+  /* Build the sizes[] array. First entry is always the primary product row
+     (kept in place so the primary product id doesn't shift). Subsequent
+     entries are siblings in variant_order. Labels come from the row's own
+     variant_label_* columns — if a legacy sz- row lacks them, fall back to
+     the S/M/L defaults so the modal still shows something meaningful. */
+  let sizes = [];
+  if(p.variant_group){
+    const primary = siblings.find(s=>s.id===p.id) || p;
+    const others  = siblings.filter(s=>s.id!==primary.id);
+    const rowFor = (r, orderHint) => {
+      const key = orderHint===1?'S':orderHint===2?'M':orderHint===3?'L':null;
+      const fallback = key ? SIZE_LABELS[key] : null;
+      const si = productImages(r);
+      return {
+        siblingId: r.id,
+        labelEn: r.variant_label_en || (fallback?fallback.en:''),
+        labelAr: r.variant_label_ar || (fallback?fallback.ar:''),
+        price: r.price!=null?String(r.price):'',
+        photo: si[0] || null
+      };
+    };
+    sizes.push(rowFor(primary, primary.variant_order||1));
+    others.forEach(s=>sizes.push(rowFor(s, s.variant_order)));
+  }
   EDIT={
     id:p.id, original:p,
     en:p.en||'', ar:p.ar||'',
@@ -1300,26 +1372,29 @@ function openEditModal(id){
     category:p.category||'decor', best:!!p.best, icon:p.icon||'mug',
     photos:imgs.slice(0,5),
     hasSizes:!!p.variant_group,
-    isReal: !!p.variant_group && !String(p.variant_group).startsWith('sz-'),
-    siblings:[],
-    sizePrices:{S:p.price!=null?String(p.price):'', M:'', L:''},
+    isReal,
+    siblings,
+    /* Sizes model: N editable rows. Row 0 is the primary product; rows 1+ are
+       siblings. Each row has { siblingId (or null for freshly-added), labelEn,
+       labelAr, price, photo (copied out to the shared photos[] slot). */
+    sizes,
+    /* Snapshot of sibling IDs at open time so we can detect which rows were
+       deleted between open and save. */
+    initialSiblingIds: siblings.map(s=>s.id),
     initialHasSizes:!!p.variant_group,
     dirty:false, saving:false
   };
-  if(p.variant_group){
-    EDIT.siblings=PRODUCTS.filter(x=>x.variant_group===p.variant_group).sort((a,b)=>(a.variant_order||0)-(b.variant_order||0));
-    // Populate size prices + photos from siblings for quick-size families
-    if(!EDIT.isReal){
-      const orderToKey={'2':'M','3':'L'};
-      EDIT.siblings.forEach(s=>{
-        const k=orderToKey[String(s.variant_order)]; if(!k) return;
-        EDIT.sizePrices[k]=s.price!=null?String(s.price):'';
-        const si=productImages(s);
-        // Copy sibling's main photo into the appropriate slot if primary's slot is empty
-        const targetIx = k==='M'?1:2;
-        if(!EDIT.photos[targetIx] && si[0]) EDIT.photos[targetIx]=si[0];
-      });
-    }
+  /* Copy sibling photos into shared slots 1..N-1 if those slots are empty.
+     Slots 4-5 (indices 3-4) remain shared gallery angles. */
+  if(EDIT.sizes.length){
+    EDIT.sizes.forEach((row, ix)=>{
+      if(ix===0){
+        // primary — photo already reflected in EDIT.photos[0] via imgs
+      } else if(ix<3){
+        if(!EDIT.photos[ix] && row.photo) EDIT.photos[ix] = row.photo;
+      }
+      // rows 4+ share slot 0 photo, nothing to copy
+    });
   }
   document.getElementById('editModalTitle').textContent='Edit product';
   const sub=[
@@ -1352,9 +1427,12 @@ function renderPhotoSlot(i){
   const src=EDIT.photos[i];
   const isMain=i===0;
   let sizeBadge='';
-  if(EDIT.hasSizes && i<3){
-    const key=['S','M','L'][i];
-    sizeBadge=`<span class="size-badge">${key} · ${SIZE_LABELS[key].en}</span>`;
+  /* Photo slot badge: slots 1..3 map to size rows 0..2 by index. Sizes 4+
+     share slot 0 (the main photo). Slots 3-4 (indices 3-4) are always
+     shared gallery angles. */
+  if(EDIT.hasSizes && i<3 && EDIT.sizes && EDIT.sizes[i]){
+    const lbl = EDIT.sizes[i].labelEn || '';
+    if(lbl) sizeBadge=`<span class="size-badge">${esc(lbl)}</span>`;
   }
   if(src){
     return `<div class="pslot filled" draggable="true" data-ix="${i}"
@@ -1377,39 +1455,65 @@ function renderPhotoSlot(i){
 function paintEditModal(){
   const b=document.getElementById('editModalBody');
   const s=EDIT; const p=s.original;
-  const sizeGrid = s.hasSizes ? `
-    <div class="size-grid">
-      ${['S','M','L'].map(k=>`
-        <div class="size-card ${(s.sizePrices[k]!==''||s.photos[k==='S'?0:k==='M'?1:2])?'active':''}">
-          <h4>${SIZE_LABELS[k].en} · <span class="lbl-ar" dir="rtl">${SIZE_LABELS[k].ar}</span></h4>
-          <input type="number" step="0.5" min="0" placeholder="Price (USD)" value="${esc(s.sizePrices[k])}" oninput="EDIT.sizePrices['${k}']=this.value; EDIT.dirty=true">
-          <div class="hint">Photo in slot ${k==='S'?1:k==='M'?2:3} · leave blank if not offered</div>
-        </div>`).join('')}
-    </div>` : '';
+  const sizeCount = (s.sizes && s.sizes.length) || 0;
+  const sizeRows = s.hasSizes ? s.sizes.map((row, ix)=>{
+    /* Slot mapping hint: row ix < 3 owns slot ix; row ix >= 3 shares slot 0. */
+    const slotHint = ix < 3
+      ? `Photo → slot ${ix+1}`
+      : `Photo → shares slot 1 (main)`;
+    const isPrimary = ix===0;
+    return `
+      <div class="size-row" draggable="true" data-ix="${ix}"
+        ondragstart="sizeRowDragStart(event,${ix})" ondragover="sizeRowDragOver(event,${ix})"
+        ondragleave="sizeRowDragLeave(event)" ondrop="sizeRowDrop(event,${ix})" ondragend="sizeRowDragEnd(event)">
+        <div class="drag" title="Drag to reorder">≡</div>
+        <input class="size-lbl-en" type="text" placeholder="Label EN (e.g. 1.5 L)" value="${esc(row.labelEn||'')}" oninput="EDIT.sizes[${ix}].labelEn=this.value;EDIT.dirty=true">
+        <input class="size-lbl-ar" type="text" dir="rtl" placeholder="Label AR" value="${esc(row.labelAr||'')}" oninput="EDIT.sizes[${ix}].labelAr=this.value;EDIT.dirty=true">
+        <input class="size-price" type="number" step="0.5" min="0" placeholder="Price (USD)" value="${esc(row.price||'')}" oninput="EDIT.sizes[${ix}].price=this.value;EDIT.dirty=true">
+        <button type="button" class="rm" onclick="removeSizeRow(${ix})" title="${isPrimary?'Remove size (this is the primary row — deleting it turns sizes off)':'Remove size'}">×</button>
+        <div class="row-hint">${slotHint}${isPrimary?' · primary row':''}</div>
+      </div>`;
+  }).join('') : '';
+  const sizeBlock = s.hasSizes ? `
+    <div class="size-presets">
+      <span class="muted">Presets:</span>
+      ${SIZE_PRESETS.map(pr=>`<button type="button" class="size-preset" onclick="applySizePreset('${pr.id}')">${esc(pr.labelEn)}</button>`).join('')}
+    </div>
+    <div class="size-rows">${sizeRows}</div>
+    <button type="button" class="size-add" onclick="addSizeRow()">+ Add size</button>` : '';
+  /* Photo hint reflects the actual mapping now that size count is variable. */
+  let photoHint;
+  if(!s.hasSizes){
+    photoHint = 'Slot 1 is the main image on cards and the coin. Slots 2–5 open in the lightbox as extra angles. Drag to reorder.';
+  } else if(sizeCount <= 3){
+    const parts = s.sizes.slice(0,3).map((r,i)=>`Slot ${i+1} → ${r.labelEn||'(size '+(i+1)+')'}`);
+    photoHint = `${parts.join(', ')}. Remaining slots are shared gallery angles.`;
+  } else {
+    const parts = s.sizes.slice(0,3).map((r,i)=>`Slot ${i+1} → ${r.labelEn||'(size '+(i+1)+')'}`);
+    const extras = s.sizes.slice(3).map(r=>r.labelEn||'(unnamed)').join(', ');
+    photoHint = `${parts.join(', ')}. Sizes ${extras} share slot 1 (the main photo). Slots 4–5 are shared gallery angles.`;
+  }
   b.innerHTML=`
     <div class="edit-section">
       <h3>Photos <span class="muted" style="font-weight:400;text-transform:none;letter-spacing:0">— up to 5</span></h3>
       <div class="slot-row">${[0,1,2,3,4].map(renderPhotoSlot).join('')}</div>
       <input type="file" id="slotUpload" accept="image/*" style="display:none">
-      <p class="muted" style="font-size:.72rem;margin-top:6px">
-        ${s.hasSizes?'Slots 1–3 are the Small / Medium / Large photos and swap on the storefront when a customer picks a size. Slots 4–5 are shared gallery angles.':'Slot 1 is the main image on cards and the coin. Slots 2–5 open in the lightbox as extra angles. Drag to reorder.'}
-      </p>
+      <p class="muted" style="font-size:.72rem;margin-top:6px">${esc(photoHint)}</p>
     </div>
 
     <div class="edit-section">
       <h3>Sizes</h3>
-      ${s.isReal?`<div class="real-variant-notice"><b>This product belongs to the variant family <code>${esc(p.variant_group)}</code>.</b> Its sizes are separate products — edit each sibling row in the product list to change its price. The quick-sizes toggle is disabled here so the family isn't broken.</div>`:''}
       <div class="size-toggle">
         <div class="size-toggle-info">
-          <b>Offer sizes (S / M / L)</b>
-          <div class="muted">Turn on to sell Small, Medium and Large versions with their own price and photo. Slot 1 → Small, Slot 2 → Medium, Slot 3 → Large.</div>
+          <b>Offer size variants</b>
+          <div class="muted">Turn on to sell multiple sizes with their own price and photo. Add as many sizes as you need — labels are fully editable in both languages.</div>
         </div>
         <label class="size-switch">
-          <input type="checkbox" id="sizeToggle" ${s.hasSizes?'checked':''} ${s.isReal?'disabled':''} onchange="onSizeToggle(this.checked)">
+          <input type="checkbox" id="sizeToggle" ${s.hasSizes?'checked':''} onchange="onSizeToggle(this.checked)">
           <span class="slider"></span>
         </label>
       </div>
-      ${sizeGrid}
+      ${sizeBlock}
     </div>
 
     <div class="edit-section">
@@ -1427,9 +1531,9 @@ function paintEditModal(){
     </div>
 
     <div class="edit-section">
-      <h3>${s.hasSizes?'Base price (Small)':'Price'} & code</h3>
+      <h3>${s.hasSizes?'Base price (primary size)':'Price'} & code</h3>
       <div class="fgrid">
-        ${s.hasSizes?'':`<div class="fg"><label>Retail Price (USD)</label><input id="ePrice" type="number" step="0.5" min="0" placeholder="blank = Contact for price" value="${esc(s.price)}" oninput="EDIT.price=this.value;EDIT.sizePrices.S=this.value;EDIT.dirty=true"></div>`}
+        ${s.hasSizes?`<div class="fg"><label>Retail Price (USD) <span class="muted" style="font-weight:400">(edit above per-size)</span></label><input type="number" step="0.5" min="0" value="${esc((s.sizes[0]&&s.sizes[0].price)||'')}" disabled></div>`:`<div class="fg"><label>Retail Price (USD)</label><input id="ePrice" type="number" step="0.5" min="0" placeholder="blank = Contact for price" value="${esc(s.price)}" oninput="EDIT.price=this.value;EDIT.dirty=true"></div>`}
         <div class="fg"><label>Cost (USD) — internal</label><input id="eCost" type="number" step="0.01" min="0" value="${esc(s.cost)}" oninput="EDIT.cost=this.value;EDIT.dirty=true"></div>
         <div class="fg"><label>Discount % <span class="muted" style="font-weight:400">(0–90, blank = none)</span></label><input id="eDiscPct" type="number" step="1" min="0" max="90" placeholder="e.g. 20" value="${esc(s.discPct)}" oninput="EDIT.discPct=this.value;EDIT.dirty=true"></div>
         <div class="fg"><label>Discount ends <span class="muted" style="font-weight:400">(local time, blank = never)</span></label><input id="eDiscEnds" type="datetime-local" value="${esc(s.discEnds)}" oninput="EDIT.discEnds=this.value;EDIT.dirty=true"></div>
@@ -1451,9 +1555,15 @@ function paintEditModal(){
 }
 function onSizeToggle(on){
   if(!EDIT) return;
-  if(EDIT.isReal){ return; }
   if(!on && EDIT.initialHasSizes){
-    if(!confirm('Turning sizes off will DELETE the Medium and Large product rows in the database and discard their prices. Continue?')) {
+    /* Turning sizes off nukes every sibling row (only actual siblings — the
+       primary keeps its own price as the un-sized product). Confirm because
+       the delete is permanent. */
+    const siblingCount = (EDIT.sizes||[]).length - 1;
+    const msg = siblingCount > 0
+      ? `Turning sizes off will DELETE ${siblingCount} sibling product row${siblingCount===1?'':'s'} in the database and discard their prices. The primary row stays as an un-sized product. Continue?`
+      : 'Turn sizes off?';
+    if(!confirm(msg)){
       document.getElementById('sizeToggle').checked = true;
       return;
     }
@@ -1461,10 +1571,104 @@ function onSizeToggle(on){
   EDIT.hasSizes = on;
   EDIT.dirty = true;
   if(on){
-    // Initialise size prices: Small = current price (base price)
-    if(EDIT.sizePrices.S==='') EDIT.sizePrices.S = EDIT.price;
+    /* Seed the sizes array on first-time enable. Reuse the S/M/L preset as
+       a familiar starting point — the admin can rename or delete rows. */
+    if(!EDIT.sizes || !EDIT.sizes.length){
+      EDIT.sizes = [{
+        siblingId: EDIT.id,
+        labelEn: 'Small', labelAr: 'صغير',
+        price: EDIT.price || '', photo: EDIT.photos[0] || null
+      }];
+    }
   }
   paintEditModal();
+}
+function addSizeRow(){
+  if(!EDIT) return;
+  EDIT.sizes = EDIT.sizes || [];
+  EDIT.sizes.push({ siblingId:null, labelEn:'', labelAr:'', price:'', photo:null });
+  EDIT.dirty = true;
+  paintEditModal();
+}
+function removeSizeRow(ix){
+  if(!EDIT || !EDIT.sizes) return;
+  const row = EDIT.sizes[ix];
+  if(!row) return;
+  /* Removing the primary row (ix 0) is destructive-in-spirit — it turns off
+     the sibling structure entirely. Route through onSizeToggle so the same
+     confirm dialog and delete cascade run. */
+  if(ix === 0){
+    if(EDIT.sizes.length === 1){
+      document.getElementById('sizeToggle').checked = false;
+      onSizeToggle(false);
+      return;
+    }
+    toast('Cannot remove the primary size row — drag another row to the top first, or turn sizes off.');
+    return;
+  }
+  /* Existing sibling → confirm and mark for deletion at save time. Newly-added
+     row (no siblingId yet) → just drop it, nothing was persisted. */
+  if(row.siblingId){
+    if(!confirm(`Delete size "${row.labelEn||'(unnamed)'}"? This removes the sibling product row from the database on save.`)) return;
+  }
+  EDIT.sizes.splice(ix, 1);
+  EDIT.dirty = true;
+  paintEditModal();
+}
+function applySizePreset(id){
+  if(!EDIT) return;
+  const preset = SIZE_PRESETS.find(p=>p.id===id);
+  if(!preset) return;
+  /* Preset fills the first N rows with the preset's labels. Existing rows past
+     the preset length are kept (so the admin doesn't lose customization). If
+     there are fewer rows than the preset, we extend. The primary siblingId is
+     preserved on row 0 so we update the primary rather than orphaning it. */
+  const existing = EDIT.sizes || [];
+  const merged = preset.rows.map((pr, ix)=>{
+    const cur = existing[ix] || {};
+    return {
+      siblingId: cur.siblingId || null,
+      labelEn: pr.labelEn,
+      labelAr: pr.labelAr,
+      price:   cur.price   || '',
+      photo:   cur.photo   || null
+    };
+  });
+  /* Keep any extra existing rows past the preset. */
+  for(let i=preset.rows.length; i<existing.length; i++) merged.push(existing[i]);
+  /* Ensure row 0 keeps its primary siblingId. */
+  if(existing[0] && existing[0].siblingId){ merged[0].siblingId = existing[0].siblingId; }
+  EDIT.sizes = merged;
+  EDIT.dirty = true;
+  paintEditModal();
+}
+function sizeRowDragStart(e, ix){
+  /* Primary row (0) stays anchored so the underlying primary product row keeps
+     its clean base name. Reorder the rest freely. */
+  if(ix === 0){ e.preventDefault(); return; }
+  editSizeDragIx = ix;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('dragging');
+}
+function sizeRowDragOver(e, ix){
+  if(editSizeDragIx === -1 || editSizeDragIx === ix || ix === 0) return;
+  e.preventDefault();
+  e.currentTarget.classList.add('drop-target');
+}
+function sizeRowDragLeave(e){ e.currentTarget.classList.remove('drop-target'); }
+function sizeRowDrop(e, ix){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drop-target');
+  if(editSizeDragIx === -1 || editSizeDragIx === ix || ix === 0){ editSizeDragIx = -1; return; }
+  const item = EDIT.sizes.splice(editSizeDragIx, 1)[0];
+  EDIT.sizes.splice(ix, 0, item);
+  editSizeDragIx = -1;
+  EDIT.dirty = true;
+  paintEditModal();
+}
+function sizeRowDragEnd(){
+  document.querySelectorAll('.size-row').forEach(el=>el.classList.remove('dragging','drop-target'));
+  editSizeDragIx = -1;
 }
 function pickSlotUpload(i){
   editSlotIx=i;
@@ -1519,13 +1723,17 @@ async function saveEditModal(){
     const s=EDIT; const p=s.original;
     if(!s.en.trim()){ setEditStatus('Name (English) is required','err'); EDIT.saving=false; return; }
     if(s.hasSizes){
-      const anyPrice = ['S','M','L'].some(k=>s.sizePrices[k]!==''&&s.sizePrices[k]!=null);
-      if(!anyPrice){ setEditStatus('Fill at least one size price','err'); EDIT.saving=false; return; }
+      if(!s.sizes || !s.sizes.length){
+        setEditStatus('Add at least one size row (or turn sizes off)','err'); EDIT.saving=false; return;
+      }
+      if(!s.sizes[0].labelEn || !s.sizes[0].labelEn.trim()){
+        setEditStatus('Every size needs an English label','err'); EDIT.saving=false; return;
+      }
+      const missingEn = s.sizes.findIndex(r=>!r.labelEn||!r.labelEn.trim());
+      if(missingEn>=0){
+        setEditStatus(`Size row ${missingEn+1} needs an English label`,'err'); EDIT.saving=false; return;
+      }
     }
-    // Primary row payload
-    const primaryImages = s.hasSizes
-      ? [s.photos[0]].concat(s.photos.slice(3)).filter(Boolean)   // slot1 (Small) + slots 4/5 shared
-      : s.photos.filter(Boolean);
     const parsePrice = v => (v===''||v==null) ? null : (isNaN(+v) ? null : +v);
     const cost = parsePrice(s.cost);
     /* Discount fields — sent as new columns discount_percent / discount_ends_at.
@@ -1534,20 +1742,39 @@ async function saveEditModal(){
     const discPctRaw = parsePrice(s.discPct);
     const discPct = (discPctRaw!=null && discPctRaw>0 && discPctRaw<=90) ? discPctRaw : null;
     const discEndsIso = (s.discEnds && discPct!=null) ? new Date(s.discEnds).toISOString() : null;
+    /* Preserve the existing variant_group tag if the family already had one —
+       both quick-size (sz-) and real (from XLSX importer) families keep their
+       original tag so the storefront's grouping stays stable. On first-time
+       enablement of sizes we mint a new sz- tag. */
+    const groupTag = s.hasSizes
+      ? (p.variant_group || ('sz-'+(s.sku||p.sku||p.id)))
+      : null;
+    /* Primary row images: slot 0 is the primary size photo, slots 3-4 are
+       shared gallery angles across the whole family. */
+    const primaryImages = s.hasSizes
+      ? [s.photos[0]].concat(s.photos.slice(3)).filter(Boolean)
+      : s.photos.filter(Boolean);
+    const primaryLabelEn = s.hasSizes ? (s.sizes[0].labelEn||'').trim() : null;
+    const primaryLabelAr = s.hasSizes ? ((s.sizes[0].labelAr||'').trim() || null) : null;
+    /* Primary row keeps the clean base name — the size label lives in
+       variant_label_en/ar and the storefront picker reads it from there.
+       Siblings get "<base> — <label>" so the admin product list can tell them
+       apart at a glance. */
     const primaryPayload={
-      en:s.en.trim(), ar:s.ar.trim()||null,
+      en: s.en.trim(),
+      ar: s.ar.trim()||null,
       description_en: s.descEn||null, description_ar: s.descAr||null,
       sku:s.sku||null, barcode:s.barcode||null,
       category:s.category, best:s.best, icon:s.icon,
       cost_usd:cost,
       images: primaryImages,
-      price: s.hasSizes ? parsePrice(s.sizePrices.S) : parsePrice(s.price),
+      price: s.hasSizes ? parsePrice(s.sizes[0].price) : parsePrice(s.price),
       discount_percent: discPct,
       discount_ends_at: discEndsIso,
-      variant_group: s.hasSizes ? (s.isReal ? p.variant_group : ('sz-'+(s.sku||p.sku||p.id))) : null,
-      variant_label_en: s.hasSizes ? (s.isReal ? p.variant_label_en : SIZE_LABELS.S.en) : null,
-      variant_label_ar: s.hasSizes ? (s.isReal ? p.variant_label_ar : SIZE_LABELS.S.ar) : null,
-      variant_order: s.hasSizes ? (s.isReal ? p.variant_order : 1) : null
+      variant_group: groupTag,
+      variant_label_en: primaryLabelEn,
+      variant_label_ar: primaryLabelAr,
+      variant_order: s.hasSizes ? 1 : null
     };
     if(DEMO){
       Object.assign(p, primaryPayload);
@@ -1556,89 +1783,76 @@ async function saveEditModal(){
       setTimeout(()=>closeEditModal(true),700);
       return;
     }
-    // 1) Update primary
+    // 1) Update primary row
     {
       const {error}=await sb.from('products').update(primaryPayload).eq('id',p.id);
       if(error) throw error;
     }
-    /* Cascade the discount to real variant siblings (Roma, EP, etc.) so the
-       storefront's per-line effective price uses the same % everywhere.
-       Only touches the two discount columns — safe. Quick-size children get
-       their discount written below when the whole child row is written. */
-    if(p.variant_group && !String(p.variant_group).startsWith('sz-')){
-      const siblingIds = PRODUCTS
-        .filter(x => x.variant_group === p.variant_group && x.id !== p.id)
-        .map(x => x.id);
-      if(siblingIds.length){
-        const {error} = await sb.from('products')
-          .update({ discount_percent: discPct, discount_ends_at: discEndsIso })
-          .in('id', siblingIds);
-        if(error) console.warn('[edit] discount cascade to siblings failed', error);
-      }
-    }
-    // 2) Handle quick-size children if not a real variant family.
-    //    CRITICAL SAFETY GATE: only touch other rows when the product is
-    //    ACTUALLY part of a sz- family. Without this guard,
-    //    "x.variant_group === p.variant_group" reduces to "== null" when
-    //    editing a non-variant product and matches every non-variant row in
-    //    the DB — the previous version of this code deleted 100+ products
-    //    on a single save of an unrelated normal product.
-    const isQuickSizeFamily = !!(p.variant_group && String(p.variant_group).startsWith('sz-'));
-    const willBeQuickSize   = !s.isReal && s.hasSizes;
-    if(isQuickSizeFamily || willBeQuickSize){
-      const groupTag = primaryPayload.variant_group;
-      const targetGroup = p.variant_group || groupTag;
-      const existingChildren = targetGroup
-        ? PRODUCTS.filter(x => x.variant_group === targetGroup && x.id !== p.id)
-        : [];
-      const existingBySize={};
-      existingChildren.forEach(c=>{
-        const key = c.variant_order===2 ? 'M' : c.variant_order===3 ? 'L' : null;
-        if(key) existingBySize[key]=c;
-      });
-      const targetSizes = s.hasSizes ? ['M','L'] : [];
-      // Sizes turned OFF — only delete siblings when we were a sz- family AND
-      // the user actively toggled sizes off. Never on a first-time save of a
-      // normal product.
-      if(!s.hasSizes){
-        if(isQuickSizeFamily && s.initialHasSizes && existingChildren.length){
-          for(const c of existingChildren){
-            const {error}=await sb.from('products').delete().eq('id',c.id);
-            if(error) throw error;
-          }
+    /* 2) Sibling rows for size variants (both sz- and real families use the
+          same code path now — they're treated identically). */
+    if(s.hasSizes){
+      /* CRITICAL SAFETY GATE: only touch other rows when we actually have a
+         groupTag. Without this, a delete/update filter with variant_group=null
+         would match every ungrouped row in the table. */
+      if(!groupTag) throw new Error('Missing variant_group for size family');
+      /* Match each size row (except primary) to an existing sibling by its
+         siblingId set at open time. Rows added in-session have siblingId=null
+         and become inserts. Siblings that were in initialSiblingIds but are no
+         longer in the sizes array are deletes. */
+      const keptSiblingIds = new Set();
+      for(let ix=1; ix<s.sizes.length; ix++){
+        const row = s.sizes[ix];
+        const labelEn = (row.labelEn||'').trim();
+        const labelAr = (row.labelAr||'').trim() || null;
+        const price = parsePrice(row.price);
+        /* Photo mapping: rows 1-2 own slots 1-2; rows 3+ share slot 0. */
+        const img = (ix<3 ? s.photos[ix] : s.photos[0]) || null;
+        const childImages = img ? [img] : [];
+        const childSku = (s.sku||p.sku||('P'+p.id)) + '-' + slug(labelEn||('v'+ix));
+        const childBarcode = s.barcode ? s.barcode + '-' + slug(labelEn||('v'+ix)) : null;
+        const childPayload = {
+          en: s.en.trim() + ' — ' + labelEn,
+          ar: (s.ar.trim()||s.en.trim()) + ' — ' + (labelAr||labelEn),
+          description_en: s.descEn||null, description_ar: s.descAr||null,
+          sku: childSku,
+          barcode: childBarcode,
+          category: s.category, best: false, icon: s.icon,
+          cost_usd: cost,
+          images: childImages,
+          price,
+          discount_percent: discPct,
+          discount_ends_at: discEndsIso,
+          variant_group: groupTag,
+          variant_label_en: labelEn,
+          variant_label_ar: labelAr,
+          variant_order: ix+1
+        };
+        if(row.siblingId){
+          keptSiblingIds.add(row.siblingId);
+          const {error}=await sb.from('products').update(childPayload).eq('id',row.siblingId);
+          if(error) throw error;
+        } else {
+          const {error}=await sb.from('products').insert(childPayload);
+          if(error) throw error;
         }
-      } else {
-        for(const key of targetSizes){
-          const price = parsePrice(s.sizePrices[key]);
-          const img = s.photos[key==='M'?1:2] || null;
-          const childImages = img ? [img] : [];
-          const childSku = (s.sku||p.sku||('P'+p.id))+'-'+key;
-          const childBarcode = s.barcode ? s.barcode + '-' + key : null;
-          const childPayload = {
-            en: s.en.trim() + ' — ' + SIZE_LABELS[key].en,
-            ar: (s.ar.trim()||s.en.trim()) + ' — ' + SIZE_LABELS[key].ar,
-            description_en: s.descEn||null, description_ar: s.descAr||null,
-            sku: childSku,
-            barcode: childBarcode,
-            category: s.category, best: false, icon: s.icon,
-            cost_usd: cost,
-            images: childImages,
-            price,
-            discount_percent: discPct,
-            discount_ends_at: discEndsIso,
-            variant_group: groupTag,
-            variant_label_en: SIZE_LABELS[key].en,
-            variant_label_ar: SIZE_LABELS[key].ar,
-            variant_order: key==='M'?2:3
-          };
-          if(existingBySize[key]){
-            const {error}=await sb.from('products').update(childPayload).eq('id',existingBySize[key].id);
-            if(error) throw error;
-          } else if(price!=null || img){
-            const {error}=await sb.from('products').insert(childPayload);
-            if(error) throw error;
-          }
-          // If price+img both empty and no existing → skip creation
+      }
+      /* Delete siblings that were removed in-session. Only touches rows that
+         were in the initial sibling set AND belong to this exact group tag —
+         double-guarded so a mistake can never cascade beyond this family. */
+      const toDelete = (s.initialSiblingIds||[]).filter(id => id!==p.id && !keptSiblingIds.has(id));
+      if(toDelete.length){
+        const {error}=await sb.from('products').delete().eq('variant_group', groupTag).in('id', toDelete);
+        if(error) throw error;
+      }
+    } else {
+      /* Sizes turned off. Delete every sibling that was in the family at open
+         time — but only if the row actually had a variant_group. Guarded on
+         both fronts (was in initialSiblingIds AND matches p.variant_group). */
+      if(s.initialHasSizes && p.variant_group && s.initialSiblingIds && s.initialSiblingIds.length>1){
+        const toDelete = s.initialSiblingIds.filter(id=>id!==p.id);
+        if(toDelete.length){
+          const {error}=await sb.from('products').delete().eq('variant_group', p.variant_group).in('id', toDelete);
+          if(error) throw error;
         }
       }
     }
@@ -1651,6 +1865,14 @@ async function saveEditModal(){
     setEditStatus('Save failed: '+(err.message||err),'err');
     EDIT.saving=false;
   }
+}
+/* URL-safe slug used for SKU suffixes on sibling rows. Falls back to 'v' when
+   the label has no ASCII characters (e.g. Arabic-only labels). */
+function slug(s){
+  const out = String(s||'').toLowerCase()
+    .normalize('NFKD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+  return out || 'v';
 }
 
 document.addEventListener('keydown',e=>{
