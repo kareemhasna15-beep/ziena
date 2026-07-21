@@ -549,7 +549,7 @@ function render(){
       ${ORDERS.length?`<table><tr><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th></th></tr>
       ${ORDERS.map(o=>`<tr>
         <td>${new Date(o.created_at).toLocaleDateString()}<br><span class="muted">${new Date(o.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span></td>
-        <td>${esc(o.name)}<br><span class="muted">${esc(o.phone||'')}</span><br><span class="muted">${esc(o.address||'')}</span>${o.note?`<br><span class="muted">📝 ${esc(o.note)}</span>`:''}</td>
+        <td>${esc(o.name)}<br><span class="muted">${esc(o.phone||'')}</span>${o.city?`<br><span class="muted">📍 ${esc(o.city)}</span>`:''}<br><span class="muted">${esc(o.address||'')}</span>${o.note?`<br><span class="muted">📝 ${esc(o.note)}</span>`:''}</td>
         <td>${(o.items||[]).map(i=>{
           const tbd = i.tbd===true || i.unit==null;
           const disc = !tbd && i.original_unit!=null && +i.original_unit > +i.unit;
@@ -557,7 +557,7 @@ function render(){
           const discBadge = disc ? ' <span style="display:inline-block;background:var(--magenta);color:var(--gold);font-size:.6rem;font-weight:800;padding:1px 6px;border-radius:6px">-'+(+i.discount_percent||0)+'%</span>' : '';
           return `${i.qty} × ${esc(i.name)}${tbdBadge}${discBadge}`;
         }).join('<br>')}${o.has_tbd_items?'<br><span class="muted" style="font-size:.72rem">(price TBD on '+((o.items||[]).filter(i=>i.tbd===true||i.unit==null).length)+' line)</span>':''}</td>
-        <td><b>$${(+o.total).toFixed(2)}</b></td>
+        <td><b>$${(+o.total).toFixed(2)}</b>${o.delivery_fee_usd!=null?`<br><span class="muted" style="font-size:.7rem">🚚 $${(+o.delivery_fee_usd).toFixed(2)}</span>`:''}</td>
         <td><button class="status ${o.status==='new'?'st-new':o.status==='done'?'st-done':'st-cancel'}" onclick="cycleStatus(${o.id},'${o.status}')">${o.status.toUpperCase()}</button></td>
         <td><button class="act del" onclick="delOrder(${o.id})">✕</button></td>
       </tr>`).join('')}</table>`:'<p class="muted">No orders yet.</p>'}

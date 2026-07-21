@@ -118,13 +118,17 @@ CREATE POLICY "discount_codes_write_admin"
 
 
 -- ══════════════════════════════════════════════════════════════════════════
--- 4. orders — Task 24 forward-compat columns (schema-lag safety)
+-- 4. orders — Task 24 + Task 26 forward-compat columns (schema-lag safety)
 --    Client-side sendOrder retries without these if PGRST204 fires, but the
 --    columns are trivial to add so we may as well.
 -- ══════════════════════════════════════════════════════════════════════════
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS has_tbd_items          boolean;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_code          text;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_code_amount   numeric;
+-- Task 26: delivery city + fee
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS city                   text;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee_usd       numeric;
+CREATE INDEX IF NOT EXISTS orders_city_idx ON orders (city);
 
 
 -- ══════════════════════════════════════════════════════════════════════════
@@ -192,7 +196,8 @@ SELECT
   (SELECT count(*) FROM discount_codes)                                   AS discount_codes_rows,
   (SELECT count(*) FROM information_schema.columns
      WHERE table_name='orders' AND column_name IN
-       ('has_tbd_items','discount_code','discount_code_amount'))          AS orders_new_cols,
+       ('has_tbd_items','discount_code','discount_code_amount',
+        'city','delivery_fee_usd'))                                      AS orders_new_cols,
   (SELECT count(*) FROM information_schema.columns
      WHERE table_name='products' AND column_name IN
        ('discount_percent','discount_ends_at','description_en',
