@@ -186,6 +186,64 @@ CREATE POLICY "categories_write_admin" ON categories FOR ALL
 
 
 -- ══════════════════════════════════════════════════════════════════════════
+-- 9. orders RLS + place_order RPC (Task 27 — re-included per re-run policy)
+--    Anon calls place_order(jsonb) which allow-lists a fixed set of columns
+--    and returns the new order id. Admin keeps full access via the
+--    authenticated policy. NO anon SELECT/UPDATE/DELETE, NO direct anon
+--    INSERT — checkout was silently 42501 without this.
+-- ══════════════════════════════════════════════════════════════════════════
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE FUNCTION public.place_order(order_data jsonb)
+RETURNS bigint
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+DECLARE
+  new_id bigint;
+BEGIN
+  INSERT INTO public.orders (
+    name, phone, address, note,
+    city, delivery_fee_usd,
+    items, total,
+    has_tbd_items, status,
+    discount_code, discount_code_amount
+  ) VALUES (
+    NULLIF(order_data->>'name',                 ''),
+    NULLIF(order_data->>'phone',                ''),
+    NULLIF(order_data->>'address',              ''),
+    NULLIF(order_data->>'note',                 ''),
+    NULLIF(order_data->>'city',                 ''),
+    NULLIF(order_data->>'delivery_fee_usd',     '')::numeric,
+    COALESCE(order_data->'items',               '[]'::jsonb),
+    NULLIF(order_data->>'total',                '')::numeric,
+    NULLIF(order_data->>'has_tbd_items',        '')::boolean,
+    COALESCE(NULLIF(order_data->>'status', ''), 'new'),
+    NULLIF(order_data->>'discount_code',        ''),
+    NULLIF(order_data->>'discount_code_amount', '')::numeric
+  )
+  RETURNING id INTO new_id;
+  RETURN new_id;
+END;
+$$;
+
+REVOKE ALL   ON FUNCTION public.place_order(jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.place_order(jsonb) TO anon, authenticated;
+
+DROP POLICY IF EXISTS "orders_admin_all" ON public.orders;
+CREATE POLICY "orders_admin_all"
+  ON public.orders
+  FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+REVOKE ALL ON TABLE public.orders FROM anon;
+GRANT  SELECT, INSERT, UPDATE, DELETE ON TABLE public.orders TO authenticated;
+
+
+-- ══════════════════════════════════════════════════════════════════════════
 -- VERIFY — run this block after the migration; every row should return >0
 -- (or 0 for admin_error_log if nothing has crashed yet, which is fine).
 -- ══════════════════════════════════════════════════════════════════════════
@@ -203,4 +261,10 @@ SELECT
        ('discount_percent','discount_ends_at','description_en',
         'description_ar','sub_category','variant_group','variant_label_en',
         'variant_label_ar','variant_order'))                              AS products_expected_cols,
-  (SELECT count(*) FROM categories)                                       AS categories_rows;
+  (SELECT count(*) FROM categories)                                       AS categories_rows,
+  (SELECT relrowsecurity FROM pg_class
+     WHERE relname='orders' AND relnamespace='public'::regnamespace)      AS orders_rls_enabled,
+  (SELECT count(*) FROM pg_proc
+     WHERE proname='place_order' AND pronamespace='public'::regnamespace) AS place_order_fn_present,
+  (SELECT count(*) FROM pg_policies
+     WHERE schemaname='public' AND tablename='orders')                    AS orders_policy_count;

@@ -983,11 +983,9 @@ try {
    mode are kept in memory only. Fill in the keys to go live. */
 const DEMO = !sb;
 /* Preview scaffolding: empty by design. If the Supabase keys are ever removed
-   the site degrades to an empty catalog / empty order log rather than showing
-   made-up customers, prices or items. */
+   the site degrades to an empty catalog rather than showing made-up
+   customers, prices or items. */
 const SEED = [];
-let demoOrders = [];
-let demoIdSeq = 1;
 
 /* ── Cart storage (per-device, safe fallback for previews) ── */
 const mem = {};
@@ -1129,7 +1127,7 @@ function resolveImage(v){
 const imgSrc = resolveImage;
 
 /* ── State ── */
-let DB=[], ORDERS=[], cart=store.get('zeina_cart')||{};
+let DB=[], cart=store.get('zeina_cart')||{};
 let LANG='en', CUR='USD', FILTER='all', adminTab='dash', editingId=null, pickedIcon='mug', VIEW='home', SESSION=null;
 let PD_CURRENT=null, PD_VARIANT_IX=0;
 let COLLECTION_SEARCH='';
@@ -1315,12 +1313,6 @@ function injectBestSellersLD(){
     el.textContent=JSON.stringify(ld);
   }catch(e){ console.warn('JSON-LD inject failed:',e); }
 }
-async function loadOrders(){
-  if(DEMO){ ORDERS=demoOrders; return; }
-  const {data,error}=await sb.from('orders').select('*').order('created_at',{ascending:false});
-  if(!error)ORDERS=data;
-}
-
 /* ── Toast ── */
 let toastTimer;
 function toast(msg){
@@ -1817,13 +1809,6 @@ function withTimeout(promise, ms, label){
   ]);
 }
 
-/* Columns on the orders table that the client sends but the Supabase schema
-   may not have yet (schema-lag). If the insert fails with PGRST204 or its
-   'Could not find the "X" column' message, sendOrder strips these fields and
-   retries once so a missing migration never blocks a customer order.
-   Every future task that adds a new orders column MUST list it here. */
-const OPTIONAL_ORDER_FIELDS = ['has_tbd_items','discount_code','discount_code_amount','city','delivery_fee_usd'];
-
 /* ── Site config (Supabase-backed, fail-soft, cached at page load) ──
    Fetched ONCE by loadSiteConfig() during boot — never inside the checkout
    submit path. Two contracts:
@@ -1863,16 +1848,6 @@ async function loadSiteConfig(){
   } catch(e){ console.warn('[site] discount_codes unavailable, promo entry disabled', e); }
 }
 
-/* Match against Postgrest's schema-cache error surface. Recognise:
-     - err.code === 'PGRST204'
-     - message: 'Could not find the "X" column of ...'
-   Anything else (permissions, timeouts, generic 400) is NOT a schema-lag. */
-function isSchemaLagError(err){
-  if(!err) return false;
-  if(err.code === 'PGRST204') return true;
-  const msg = String((err && err.message) || err);
-  return /could not find.*column|schema cache/i.test(msg);
-}
 async function sendOrder(){
   /* Every non-trivial expression below runs under a labeled step. If ANY step
      throws, the catch surfaces the step label so the crash line is obvious in
@@ -1979,42 +1954,31 @@ async function sendOrder(){
       status: 'new'
     };
 
-    /* -------- insert_order (network) -------- */
+    /* -------- insert_order (network) --------
+       Anon cannot INSERT into orders directly (RLS blocks it, and we won't
+       grant anon SELECT/INSERT on a table that stores customer PII). The
+       storefront calls a SECURITY DEFINER RPC `place_order(order_data jsonb)`
+       that reads a fixed allowlist of columns and returns the new id. Two
+       things fall out of this:
+         · schema-lag safety: the RPC ignores unknown keys, so we no longer
+           need the OPTIONAL_ORDER_FIELDS strip-and-retry dance.
+         · injection safety: a compromised client can't write arbitrary
+           columns because the RPC never reads them.
+       See supabase_task27_orders_rls.sql. */
     step = 'insert_order';
     const t0=performance.now();
     let orderId;
     if(DEMO){
-      orderId=++demoIdSeq;
-      demoOrders.unshift({id:orderId,created_at:new Date().toISOString(),...orderPayload});
+      orderId = 1000 + Math.floor(Math.random()*9000);
     } else {
-      const attempt = payload => withTimeout(
-        sb.from('orders').insert(payload).select('id').single(),
+      const result = await withTimeout(
+        sb.rpc('place_order', { order_data: orderPayload }),
         15000, t('coTimeout')
       );
-      let result = await attempt(orderPayload);
-      if(result.error && isSchemaLagError(result.error)){
-        step = 'insert_order_retry';
-        const stripped = { ...orderPayload };
-        const droppedFields = [];
-        OPTIONAL_ORDER_FIELDS.forEach(k => {
-          if(k in stripped){ droppedFields.push(k); delete stripped[k]; }
-        });
-        console.warn('[checkout] schema-lag detected, retrying without: ' + droppedFields.join(', '), result.error);
-        logCheckoutError({
-          category: 'order_insert_retry',
-          code: String((result.error && result.error.code) || ''),
-          message: (result.error && result.error.message) || 'schema lag',
-          hint: (result.error && result.error.hint) || null,
-          details: 'stripped fields: ' + droppedFields.join(', '),
-          hasTbd: tbdCount > 0,
-          itemCount: items.length,
-          pricedCount, tbdCount, total,
-          customerName: name, customerPhone: phone
-        });
-        result = await attempt(stripped);
-      }
       if(result.error) throw result.error;
-      orderId = result.data.id;
+      const newId = result.data;
+      if(newId == null){ throw new Error('place_order returned no id'); }
+      orderId = newId;
     }
     const perfMs=Math.round(performance.now()-t0);
     console.log('[checkout] order insert '+perfMs+'ms · total '+total+' · items '+items.length+' ('+tbdCount+' TBD)');
@@ -2045,8 +2009,8 @@ async function sendOrder(){
     const msgDetail = (err && err.message) || String(err);
     /* Loud, structured console log. `step` names the exact phase that threw
        — read_form / master_switch / lock_button / build_items /
-       build_totals / build_payload / insert_order / insert_order_retry /
-       confirmation / email_dispatch. */
+       build_totals / build_payload / insert_order / confirmation /
+       email_dispatch. */
     console.error('[checkout] failed at step="'+step+'"', {
       code, message: msgDetail,
       hint: err && err.hint,
