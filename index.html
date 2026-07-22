@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zeina — Home &amp; Kitchen Accessories | Tripoli, Lebanon</title>
-<meta name="description" content="Zeina — Home &amp; Kitchen Accessories in Tripoli, Lebanon. Fine dinnerware, gold cutlery, coffee &amp; tea sets, luxury tissue boxes, storage jars, trays, and refined décor. Cash on delivery across Lebanon.">
-<meta name="keywords" content="Zeina, home accessories, kitchen accessories, dinnerware, cutlery, coffee sets, tissue boxes, decor, Tripoli, Lebanon, Beirut, ملحقات منزلية, ملحقات مطبخ, لبنان">
+<title>Zeina — Home &amp; Kitchen Accessories | Saida (Sidon), Lebanon</title>
+<meta name="description" content="Zeina — Home &amp; Kitchen Accessories in Saida (Sidon), Lebanon. Fine dinnerware, gold cutlery, coffee &amp; tea sets, luxury tissue boxes, storage jars, trays, and refined décor. Cash on delivery across Lebanon.">
+<meta name="keywords" content="Zeina, home accessories, kitchen accessories, dinnerware, cutlery, coffee sets, tissue boxes, decor, Saida, Sidon, Lebanon, Beirut, ملحقات منزلية, ملحقات مطبخ, صيدا, لبنان">
 <meta name="author" content="Zeina Home & Kitchen">
 <meta name="theme-color" content="#BA1270">
 <link rel="canonical" href="https://kareemhasna15-beep.github.io/ziena/">
@@ -16,7 +16,7 @@
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Zeina — Home &amp; Kitchen Accessories">
-<meta property="og:title" content="Zeina — Home &amp; Kitchen Accessories | Tripoli, Lebanon">
+<meta property="og:title" content="Zeina — Home &amp; Kitchen Accessories | Saida (Sidon), Lebanon">
 <meta property="og:description" content="Fine dinnerware, gold cutlery, coffee &amp; tea sets, tissue boxes and elegant décor. Cash on delivery across Lebanon.">
 <meta property="og:url" content="https://kareemhasna15-beep.github.io/ziena/">
 <meta property="og:image" content="https://kareemhasna15-beep.github.io/ziena/assets/zeina-logo-full.png">
@@ -70,7 +70,7 @@
   "address": {
     "@type": "PostalAddress",
     "addressCountry": "LB",
-    "addressLocality": "Tripoli"
+    "addressLocality": "Saida"
   },
   "sameAs": [
     "https://wa.me/96181830202"
@@ -465,6 +465,12 @@ html[dir="rtl"] .cat-tile-inner h3{font-family:'Tajawal',sans-serif;font-weight:
 html[dir="rtl"] .search-empty h3{font-family:'Tajawal',sans-serif;font-weight:700}
 .search-empty a{color:var(--magenta);font-weight:600;border-bottom:1px solid var(--magenta);padding-bottom:1px;cursor:pointer}
 mark.q{background:var(--gold-soft);color:var(--plum);font-weight:600;padding:0 2px;border-radius:3px}
+/* Search overlay: category-suggestion chips row directly under the search bar */
+.search-cats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;align-items:center}
+.search-cats-label{font-size:.72rem;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase;margin-inline-end:4px}
+.search-cat{background:#fff;border:1.5px solid var(--blush-2);color:var(--plum);border-radius:999px;padding:7px 14px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;transition:.18s;line-height:1}
+.search-cat:hover{border-color:var(--magenta);background:var(--blush);color:var(--magenta)}
+html[dir="rtl"] .search-cat{font-family:'Tajawal',sans-serif}
 
 @media(max-width:520px){
   .cats-page,.cat-listing{padding:34px 0 54px}
@@ -895,6 +901,65 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const PRICE_MULTIPLIER = 1;        // 1.5 = +50% markup on all base prices
 const LBP_RATE  = 89500;           // Lira per 1 USD
 const WA_NUMBER = '96181830202';   // store WhatsApp number (Lebanon +961 81 830 202)
+
+/* Delivery pricing — one source of truth. `defaultUsd` covers every city except
+   the overrides in `byCity`, keyed by CITIES[i].id. To reprice: edit the numbers,
+   nothing else. To add a discounted city, add a byCity entry with the id. */
+const DELIVERY = {
+  defaultUsd: 5,
+  byCity: { saida: 3 }
+};
+
+/* Lebanese cities & major towns for the checkout dropdown. Order in the UI is
+   alphabetical by the current language, but `pin:true` cities are pinned to
+   the top (most orders come from Saida). `id` is the stable value stored in
+   the order row and used to look up delivery pricing above. */
+const CITIES = [
+  { id:'saida',       en:'Saida (Sidon)', ar:'صيدا',            pin:true },
+  { id:'beirut',      en:'Beirut',        ar:'بيروت'      },
+  { id:'tripoli',     en:'Tripoli',       ar:'طرابلس'     },
+  { id:'tyre',        en:'Tyre (Sour)',   ar:'صور'        },
+  { id:'nabatieh',    en:'Nabatieh',      ar:'النبطية'    },
+  { id:'zahle',       en:'Zahle',         ar:'زحلة'       },
+  { id:'jounieh',     en:'Jounieh',       ar:'جونية'      },
+  { id:'byblos',      en:'Byblos (Jbeil)',ar:'جبيل'       },
+  { id:'baalbek',     en:'Baalbek',       ar:'بعلبك'      },
+  { id:'aley',        en:'Aley',          ar:'عاليه'      },
+  { id:'baabda',      en:'Baabda',        ar:'بعبدا'      },
+  { id:'batroun',     en:'Batroun',       ar:'البترون'    },
+  { id:'bcharre',     en:'Bcharre',       ar:'بشري'       },
+  { id:'zgharta',     en:'Zgharta',       ar:'زغرتا'      },
+  { id:'koura',       en:'Koura (Amioun)',ar:'الكورة'     },
+  { id:'minieh',      en:'Minieh',        ar:'المنية'     },
+  { id:'akkar',       en:'Akkar (Halba)', ar:'عكار'       },
+  { id:'hermel',      en:'Hermel',        ar:'الهرمل'     },
+  { id:'rashaya',     en:'Rashaya',       ar:'راشيا'      },
+  { id:'hasbaya',     en:'Hasbaya',       ar:'حاصبيا'     },
+  { id:'marjeyoun',   en:'Marjeyoun',     ar:'مرجعيون'    },
+  { id:'bint-jbeil',  en:'Bint Jbeil',    ar:'بنت جبيل'   },
+  { id:'jezzine',     en:'Jezzine',       ar:'جزين'       },
+  { id:'chouf',       en:'Chouf (Beiteddine)', ar:'الشوف' },
+  { id:'metn',        en:'Metn (Jdeideh)', ar:'المتن'     },
+  { id:'keserwan',    en:'Keserwan',      ar:'كسروان'     },
+  { id:'bourj-hammoud', en:'Bourj Hammoud', ar:'برج حمود' },
+  { id:'dbayeh',      en:'Dbayeh',        ar:'ضبية'       },
+  { id:'antelias',    en:'Antelias',      ar:'انطلياس'    },
+  { id:'broummana',   en:'Broummana',     ar:'برمانا'     },
+  { id:'damour',      en:'Damour',        ar:'الدامور'    },
+  { id:'khaldeh',     en:'Khaldeh',       ar:'خلدة'       },
+  { id:'chtaura',     en:'Chtaura',       ar:'شتورا'      },
+  { id:'anjar',       en:'Anjar',         ar:'عنجر'       },
+  { id:'riyaq',       en:'Riyaq',         ar:'رياق'       },
+  { id:'other',       en:'Other',         ar:'أخرى'       }
+];
+/* Look up a city by its stored id. Falls back to a synthetic "unknown" entry
+   so the UI never crashes if the DB has an id we don't know about. */
+function cityById(id){ return CITIES.find(c=>c.id===id) || null; }
+function cityDeliveryUsd(id){
+  return (DELIVERY.byCity && DELIVERY.byCity[id] != null)
+    ? +DELIVERY.byCity[id]
+    : +DELIVERY.defaultUsd;
+}
 /* ═══════════════════════════════════════════════════════════════ */
 
 /* Robust client init: guard against the CDN script being absent (blocked, offline,
@@ -956,13 +1021,14 @@ const T = {
   colSearchPh:'Search the collection…',noMatch:'No matching products.',
   askWa:'Ask on WhatsApp',
   mobLang:'Language',mobCur:'Currency',mobAsk:'Chat with us',
-  coTitle:'Checkout',coName:'Full name',coPhone:'Phone number',coAddr:'Delivery address',coNote:'Note (optional)',
+  coTitle:'Checkout',coName:'Full name',coPhone:'Phone number',coCity:'City',coCityPh:'Select your city',coAddr:'Delivery address',coNote:'Note (optional)',
+  coSubtotal:'Subtotal',coDelivery:'Delivery',
   coSummary:'Order summary',coSend:'Place order',coHint:'Cash on delivery — no online payment. We will contact you to confirm.',
   coDone:'Order placed!',doneTitle:'Order received! 🎉',doneNo:'Order number',
   doneMsg:'Thank you! We will contact you shortly to confirm delivery. Payment is cash on delivery.',
   doneWa:'Also send it on WhatsApp (optional)',doneBack:'Back to shop',coFail:'Could not send the order. Please check your connection and try again.',
-  waOrder:'Hello Zeina! New order:%0A',waName:'Name',waPhone:'Phone',waAddr:'Address',waNote:'Note',waTotal:'Total',
-  toastAdd:'Added to cart',toastNeed:'Please fill name, phone and address',loadFail:'Could not load products. Check your internet and refresh.',
+  waOrder:'Hello Zeina! New order:%0A',waName:'Name',waPhone:'Phone',waCity:'City',waAddr:'Address',waNote:'Note',waTotal:'Total',waDelivery:'Delivery',
+  toastAdd:'Added to cart',toastNeed:'Please fill name, phone, city and address',loadFail:'Could not load products. Check your internet and refresh.',
   coSending:'Placing order…',coRetry:'Try again',coTimeout:'Connection is slow. Try again?',
   tbdShort:'Price TBD',tbdBadge:'To be priced',
   tbdNoticeSingle:'1 item will be priced separately — we\'ll contact you on WhatsApp before delivery to confirm the price.',
@@ -992,13 +1058,14 @@ const T = {
   colSearchPh:'ابحث في المجموعة…',noMatch:'لا توجد منتجات مطابقة.',
   askWa:'اسألي عبر واتساب',
   mobLang:'اللغة',mobCur:'العملة',mobAsk:'دردشة معنا',
-  coTitle:'إتمام الطلب',coName:'الاسم الكامل',coPhone:'رقم الهاتف',coAddr:'عنوان التوصيل',coNote:'ملاحظة (اختياري)',
+  coTitle:'إتمام الطلب',coName:'الاسم الكامل',coPhone:'رقم الهاتف',coCity:'المدينة',coCityPh:'اختاري مدينتك',coAddr:'عنوان التوصيل',coNote:'ملاحظة (اختياري)',
+  coSubtotal:'المجموع الفرعي',coDelivery:'التوصيل',
   coSummary:'ملخص الطلب',coSend:'تأكيد الطلب',coHint:'الدفع عند الاستلام — لا يوجد دفع إلكتروني. سنتواصل معك للتأكيد.',
   coDone:'تم استلام الطلب!',doneTitle:'تم استلام طلبك! 🎉',doneNo:'رقم الطلب',
   doneMsg:'شكراً لك! سنتواصل معك قريباً لتأكيد التوصيل. الدفع عند الاستلام.',
   doneWa:'أرسليه أيضاً عبر واتساب (اختياري)',doneBack:'العودة للمتجر',coFail:'تعذّر إرسال الطلب. تحققي من الاتصال وحاولي مجدداً.',
-  waOrder:'مرحباً زينة! طلب جديد:%0A',waName:'الاسم',waPhone:'الهاتف',waAddr:'العنوان',waNote:'ملاحظة',waTotal:'المجموع',
-  toastAdd:'أُضيفت إلى السلة',toastNeed:'الرجاء تعبئة الاسم والهاتف والعنوان',loadFail:'تعذّر تحميل المنتجات. تحققي من الإنترنت وأعيدي التحميل.',
+  waOrder:'مرحباً زينة! طلب جديد:%0A',waName:'الاسم',waPhone:'الهاتف',waCity:'المدينة',waAddr:'العنوان',waNote:'ملاحظة',waTotal:'المجموع',waDelivery:'التوصيل',
+  toastAdd:'أُضيفت إلى السلة',toastNeed:'الرجاء تعبئة الاسم والهاتف والمدينة والعنوان',loadFail:'تعذّر تحميل المنتجات. تحققي من الإنترنت وأعيدي التحميل.',
   coSending:'جارٍ إرسال الطلب…',coRetry:'أعيدي المحاولة',coTimeout:'الاتصال بطيء. حاولي مجدداً؟',
   tbdShort:'قيد التسعير',tbdBadge:'قيد التسعير',
   tbdNoticeSingle:'قطعة واحدة سيتم تسعيرها بشكل منفصل — سنتواصل معك عبر واتساب قبل التوصيل لتأكيد السعر.',
@@ -1067,6 +1134,9 @@ let LANG='en', CUR='USD', FILTER='all', adminTab='dash', editingId=null, pickedI
 let PD_CURRENT=null, PD_VARIANT_IX=0;
 let COLLECTION_SEARCH='';
 let COLLECTION_DEBOUNCE=null;
+/* Persist the last-picked city so a customer coming back doesn't have to
+   choose again. Not sensitive — same tier as the cart itself. */
+let CHECKOUT_CITY = store.get('zeina_city') || '';
 const t=k=>T[LANG][k];
 const byId=id=>DB.find(p=>p.id==id);
 const pname=p=>LANG==='en'?p.en:(p.ar||p.en);
@@ -1665,10 +1735,30 @@ function renderCheckout(){
   const noticeTxt = tbdCount === 1
     ? t('tbdNoticeSingle')
     : t('tbdNoticeMany').replace('{N}', tbdCount);
+  /* Build the city dropdown: pinned cities first, then alphabetical by the
+     current language. `<option value="">` is the placeholder so the initial
+     state has NO delivery fee attached until the customer picks. */
+  const pinned = CITIES.filter(c=>c.pin);
+  const rest   = CITIES.filter(c=>!c.pin).slice().sort((a,b)=>{
+    const av = LANG==='ar' ? a.ar : a.en;
+    const bv = LANG==='ar' ? b.ar : b.en;
+    return av.localeCompare(bv, LANG==='ar' ? 'ar' : 'en');
+  });
+  const cityOptions = [...pinned, ...rest].map(c=>{
+    const label = LANG==='ar' ? c.ar : c.en;
+    const sel = CHECKOUT_CITY === c.id ? 'selected' : '';
+    return `<option value="${esc(c.id)}" ${sel}>${esc(label)}</option>`;
+  }).join('');
   box.innerHTML=`
     <h2>${t('coTitle')}</h2>
     <div class="f-group"><label>${t('coName')}</label><input id="coName" type="text"></div>
     <div class="f-group"><label>${t('coPhone')}</label><input id="coPhone" type="tel" dir="ltr"></div>
+    <div class="f-group"><label>${t('coCity')}</label>
+      <select id="coCity" onchange="onCityChange(this.value)">
+        <option value="">${esc(t('coCityPh'))}</option>
+        ${cityOptions}
+      </select>
+    </div>
     <div class="f-group"><label>${t('coAddr')}</label><textarea id="coAddr" rows="2"></textarea></div>
     <div class="f-group"><label>${t('coNote')}</label><input id="coNote" type="text"></div>
     <div class="co-summary">
@@ -1681,7 +1771,9 @@ function renderCheckout(){
         const badge = priced ? '' : ` <span class="tbd-chip">${t('tbdBadge')}</span>`;
         return `<div class="line"><span>${q} × ${esc(pname(p))}${badge}</span><span>${right}</span></div>`;
       }).join('')}
-      <div class="line tot"><span>${totalLabel}</span><span>${fmtPriceTotal()}</span></div>
+      <div class="line"><span>${t('coSubtotal')}</span><span id="coSubtotalVal">${fmtPriceTotal()}</span></div>
+      <div class="line"><span>${t('coDelivery')}</span><span id="coDeliveryVal">${fmtDeliveryFee(CHECKOUT_CITY)}</span></div>
+      <div class="line tot"><span>${totalLabel}</span><span id="coTotalVal">${fmtCheckoutTotal(CHECKOUT_CITY)}</span></div>
       ${tbdCount>0?`<div class="line tot-plus"><span>&nbsp;</span><span class="tbd-note-inline">${plusTbdTxt}</span></div>`:''}
     </div>
     ${tbdCount>0?`<div class="tbd-notice"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16.5v.5"/></svg><span>${esc(noticeTxt)}</span></div>`:''}
@@ -1689,6 +1781,34 @@ function renderCheckout(){
     <div id="coErr"></div>
     <button class="btn btn-primary" style="width:100%" id="coSendBtn" onclick="sendOrder()">${t('coSend')}</button>
   `;
+}
+/* Format the delivery fee for the currently-selected city. Empty city keeps
+   the field blank so the customer sees "—" until they pick. */
+function fmtDeliveryFee(cityId){
+  if(!cityId) return '—';
+  const usd = cityDeliveryUsd(cityId);
+  if(CUR==='USD') return '$'+usd.toFixed(2).replace(/\.00$/,'');
+  const lbp = Math.round(usd * LBP_RATE / 500) * 500;
+  return lbp.toLocaleString(LANG==='ar'?'ar-LB':'en-US') + ' ل.ل';
+}
+function fmtCheckoutTotal(cityId){
+  const sub = cartTotal();
+  const fee = cityId ? cityDeliveryUsd(cityId) : 0;
+  const total = sub + fee;
+  if(CUR==='USD') return '$'+total.toFixed(2).replace(/\.00$/,'');
+  const lbp = Math.round(total * LBP_RATE / 500) * 500;
+  return lbp.toLocaleString(LANG==='ar'?'ar-LB':'en-US') + ' ل.ل';
+}
+/* Live-update the summary the moment the customer changes the city — no
+   re-render of the whole form so the other fields keep their in-progress
+   values. */
+function onCityChange(id){
+  CHECKOUT_CITY = id || '';
+  try { store.set('zeina_city', CHECKOUT_CITY); } catch(_){}
+  const dEl = document.getElementById('coDeliveryVal');
+  const tEl = document.getElementById('coTotalVal');
+  if(dEl) dEl.textContent = fmtDeliveryFee(CHECKOUT_CITY);
+  if(tEl) tEl.textContent = fmtCheckoutTotal(CHECKOUT_CITY);
 }
 function withTimeout(promise, ms, label){
   return Promise.race([
@@ -1702,7 +1822,7 @@ function withTimeout(promise, ms, label){
    'Could not find the "X" column' message, sendOrder strips these fields and
    retries once so a missing migration never blocks a customer order.
    Every future task that adds a new orders column MUST list it here. */
-const OPTIONAL_ORDER_FIELDS = ['has_tbd_items','discount_code','discount_code_amount'];
+const OPTIONAL_ORDER_FIELDS = ['has_tbd_items','discount_code','discount_code_amount','city','delivery_fee_usd'];
 
 /* ── Site config (Supabase-backed, fail-soft, cached at page load) ──
    Fetched ONCE by loadSiteConfig() during boot — never inside the checkout
@@ -1766,13 +1886,21 @@ async function sendOrder(){
     /* -------- read_form -------- */
     const nameEl=document.getElementById('coName');
     const phoneEl=document.getElementById('coPhone');
+    const cityEl=document.getElementById('coCity');
     const addrEl=document.getElementById('coAddr');
     const noteEl=document.getElementById('coNote');
     const name=(nameEl&&nameEl.value||'').trim();
     const phone=(phoneEl&&phoneEl.value||'').trim();
+    const cityId=(cityEl&&cityEl.value||'').trim();
     const addr=(addrEl&&addrEl.value||'').trim();
     const note=(noteEl&&noteEl.value||'').trim();
-    if(!name||!phone||!addr){ toast(t('toastNeed')); return; }
+    if(!name||!phone||!cityId||!addr){ toast(t('toastNeed')); return; }
+    const cityRow = cityById(cityId);
+    /* Store EN name in the DB so admin/reporting is language-agnostic. If we
+       somehow get an unknown id (shouldn't happen — dropdown values are all
+       CITIES ids), fall back to the raw id string so the order still saves. */
+    const cityStored = cityRow ? cityRow.en : cityId;
+    const deliveryFeeUsd = +cityDeliveryUsd(cityId).toFixed(2);
 
     /* -------- master_switch (fail-soft, no DB read here — SITE was warmed at boot) -------- */
     step = 'master_switch';
@@ -1826,9 +1954,15 @@ async function sendOrder(){
 
     /* -------- build_totals -------- */
     step = 'build_totals';
-    const rawTotal = cartTotal();
-    const total = Number.isFinite(rawTotal) ? +rawTotal.toFixed(2) : 0;
-    const totalTxt = fmtPriceTotal();
+    const rawSubtotal = cartTotal();
+    const subtotal = Number.isFinite(rawSubtotal) ? +rawSubtotal.toFixed(2) : 0;
+    /* Total = subtotal + delivery. Discount codes (Task 24) already subtract
+       from cartTotal(), so we just add the flat delivery fee on top. Delivery
+       is charged even for TBD-only carts because it's a per-visit cost. */
+    const total = +(subtotal + deliveryFeeUsd).toFixed(2);
+    const totalTxt = fmtCheckoutTotal(cityId);
+    const subtotalTxt = fmtPriceTotal();
+    const deliveryTxt = fmtDeliveryFee(cityId);
     const currency = CUR;
     const tbdCount = items.filter(i => i.tbd).length;
     const pricedCount = items.filter(i => !i.tbd).length;
@@ -1837,6 +1971,8 @@ async function sendOrder(){
     step = 'build_payload';
     const orderPayload = {
       name, phone, address: addr, note,
+      city: cityStored,
+      delivery_fee_usd: deliveryFeeUsd,
       items,
       total,
       has_tbd_items: tbdCount > 0,
@@ -1893,7 +2029,7 @@ async function sendOrder(){
         msg += `• ${q} × ${p.en} — ${t('tbdShort')}%0A`;
       }
     });
-    msg+=`%0A${t('waTotal')}: ${totalTxt}%0A${t('waName')}: ${encodeURIComponent(name)}%0A${t('waPhone')}: ${encodeURIComponent(phone)}%0A${t('waAddr')}: ${encodeURIComponent(addr)}`;
+    msg+=`%0A${t('waDelivery')}: ${deliveryTxt}%0A${t('waTotal')}: ${totalTxt}%0A${t('waName')}: ${encodeURIComponent(name)}%0A${t('waPhone')}: ${encodeURIComponent(phone)}%0A${t('waCity')}: ${encodeURIComponent(LANG==='ar'&&cityRow?cityRow.ar:cityStored)}%0A${t('waAddr')}: ${encodeURIComponent(addr)}`;
     if(note)msg+=`%0A${t('waNote')}: ${encodeURIComponent(note)}`;
     cart={};saveCart();renderCartBadge();
     renderOrderDone(orderId,entries,totalTxt,msg);
@@ -2084,13 +2220,19 @@ async function sendOrderEmail(orderId, o, totalTxt, currency, extra){
           : '+ ' + tbdCount + ' items to be priced (' + tbdUnits + ' units)')
       : '';
 
+    /* Delivery-fee display for the email. Uses fmtMoney so USD/LBP both work
+       consistently. Empty city yields '—' so the template can still render. */
+    const deliveryUsd = (o.delivery_fee_usd != null) ? +o.delivery_fee_usd : 0;
+    const deliveryTxt = (o.city && deliveryUsd > 0) ? fmtMoney(deliveryUsd) : (o.city ? fmtMoney(0) : '—');
     const params={
       order_id: '#'+orderId,
       customer_name: o.name,
       customer_phone: o.phone,
       customer_phone_clean: cleanLebanesePhone(o.phone),
+      customer_city: o.city || '—',
       customer_address: o.address,
       customer_note: o.note || '—',
+      delivery_fee: deliveryTxt,
       items_list: itemsPlain,
       items_html: itemsHtml,
       item_count: itemCount,
@@ -2320,11 +2462,17 @@ function renderSearchResults(){
   const body=document.getElementById('searchBody');
   const q=SEARCH_TERM.trim();
   const vis=visibleDB();
+  const nq=normalize(q);
+  /* Category chips row — shown above the product grid. When the query is
+     empty this doubles as a browse shortcut (all categories). When there IS a
+     query, we filter chips by whichever category name (EN or AR) matches. */
+  const chipsHtml = renderSearchCatChips(nq);
   if(!q){
-    body.innerHTML=`<div class="search-count">${LANG==='ar'?`اكتب للبحث في ${vis.length} منتج`:`Start typing to search across ${vis.length} products`}</div>`;
+    body.innerHTML=`
+      ${chipsHtml}
+      <div class="search-count">${LANG==='ar'?`اكتب للبحث في ${vis.length} منتج`:`Start typing to search across ${vis.length} products`}</div>`;
     return;
   }
-  const nq=normalize(q);
   const results=vis.filter(p=>
     normalize(p.en).includes(nq) ||
     normalize(p.ar).includes(nq) ||
@@ -2334,6 +2482,7 @@ function renderSearchResults(){
   );
   if(!results.length){
     body.innerHTML=`
+      ${chipsHtml}
       <div class="search-empty">
         <h3>${LANG==='ar'?'لا توجد منتجات':'No products found'}</h3>
         <p style="margin-top:6px">${LANG==='ar'?'جرّبي كلمة أخرى أو ':'Try a different word or '}
@@ -2345,10 +2494,69 @@ function renderSearchResults(){
     ? `${results.length} ${results.length===1?'نتيجة':'نتيجة'}`
     : `${results.length} ${results.length===1?'result':'results'}`;
   body.innerHTML=`
+    ${chipsHtml}
     <div class="search-count">${countTxt}</div>
     <div class="prod-grid">
       ${results.map(p=>searchCard(p,q)).join('')}
     </div>`;
+}
+/* Build the row of category chips shown at the top of the search overlay.
+   Query is the already-normalized search term (empty string = show all).
+   Chips come from BOTH the coarse `categories` list (EN/AR names) and every
+   sub_category present in the loaded products. Clicking a chip navigates to
+   the matching page:
+     - sub_category chip  → #category/<slug of sub>
+     - coarse category chip → home page filtered by that category id (FILTER).
+   Both close the search overlay first. */
+function renderSearchCatChips(nq){
+  const chips = [];
+  const seen = new Set();
+  /* Coarse categories (dinner, coffee, drink, cutlery, serve, kitchen, tissue,
+     decor) — the eight top-level ones. Filter home page by FILTER on click. */
+  categories.forEach(c=>{
+    const labelEn = c.en;
+    const labelAr = c.ar || c.en;
+    const label = LANG==='ar' ? labelAr : labelEn;
+    if(nq && !(normalize(labelEn).includes(nq) || normalize(labelAr).includes(nq))) return;
+    const key = 'c:' + c.id;
+    if(seen.has(key)) return;
+    seen.add(key);
+    chips.push({ key, label, action: `closeSearch();setCategoryFilter('${esc(c.id)}')` });
+  });
+  /* Sub-categories present in the current visible catalog. Deduplicated by raw
+     value; label uses catName() so the current language wins. */
+  const subs = [...new Set(visibleDB().filter(p=>p.sub).map(p=>p.sub))];
+  subs.forEach(sub=>{
+    const labelEn = sub;
+    const labelAr = (CAT_NAMES[sub] && CAT_NAMES[sub].ar) || sub;
+    const label = LANG==='ar' ? labelAr : labelEn;
+    if(nq && !(normalize(labelEn).includes(nq) || normalize(labelAr).includes(nq))) return;
+    const key = 's:' + sub;
+    if(seen.has(key)) return;
+    seen.add(key);
+    chips.push({ key, label, action: `closeSearch();location.hash='#category/'+'${esc(slug(sub))}'` });
+  });
+  if(!chips.length) return '';
+  /* Cap to a reasonable number so the row doesn't blow up on empty queries. */
+  const MAX_CHIPS = 24;
+  const shown = chips.slice(0, MAX_CHIPS);
+  const label = LANG==='ar' ? 'الأقسام' : 'Categories';
+  return `<div class="search-cats" role="list">
+    <span class="search-cats-label">${label}</span>
+    ${shown.map(c=>`<button type="button" class="search-cat" role="listitem" onclick="${c.action}">${esc(c.label)}</button>`).join('')}
+  </div>`;
+}
+/* Helper for coarse category chips — sets the home-page FILTER and scrolls
+   to the collection section so the user actually sees the filtered result. */
+function setCategoryFilter(cid){
+  FILTER = cid;
+  if(VIEW !== 'home') go('home', 'catalog');
+  else {
+    if(typeof renderChips === 'function') renderChips();
+    if(typeof renderProducts === 'function') renderProducts();
+    const el = document.getElementById('catalog') || document.getElementById('collection');
+    if(el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
 }
 function searchCard(p,q){
   return `
