@@ -1627,7 +1627,17 @@ function renderBest(){
   setupBestCarousel();
 }
 
-/* ── Best-sellers carousel: rAF loop, pointer drag, momentum, auto-resume ── */
+/* ── Best-sellers carousel: rAF loop, pointer drag, momentum, auto-resume ──
+   Tap vs drag: pointerdown records a start point + timestamp but does NOT
+   set pointer capture or "dragging" state. Only after the pointer crosses
+   an 8px displacement OR is held past the tap-duration threshold does the
+   carousel commit to a drag (grabs capture, adds .dragging CSS, and starts
+   translating the track). Anything shorter is a tap — the click event
+   propagates normally to the .bs-card or its inner buttons.
+
+   Fixes the bug where every pointerdown grabbed capture and then the
+   synthesized click was retargeted to the marquee, so cards and the
+   Add-to-cart button inside them appeared to swallow every click. */
 let bsCarousel=null;
 function setupBestCarousel(){
   const marquee=document.getElementById('bsMarquee');
@@ -1635,11 +1645,18 @@ function setupBestCarousel(){
   if(!marquee||!track||!track.children.length)return;
   const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
   if(bsCarousel)bsCarousel.destroy();
+  const DRAG_THRESHOLD_PX = 8;
+  const TAP_MAX_MS       = 250;    // beyond this a hold+release counts as a drag
   const S={
     x:0, vx:0, autoVx:-0.15, halfW:0,
-    dragging:false, startX:0, startY:0, lastX:0, lastT:0, dragDist:0,
+    /* pressed = pointer is down but we don't yet know tap vs drag.
+       dragging = drag committed (past threshold or hold time).            */
+    pressed:false, dragging:false,
+    startX:0, startY:0, startT:0,
+    lastX:0, lastT:0, dragDist:0,
     lastFrame:performance.now(), releasedAt:0, released:false,
-    dead:false, raf:0, axisLocked:null
+    dead:false, raf:0, axisLocked:null,
+    pointerId:-1, suppressNextClick:false
   };
   const measure=()=>{
     const kids=track.children;
@@ -1654,11 +1671,13 @@ function setupBestCarousel(){
     while(S.x>0)S.x-=S.halfW;
   };
   const apply=()=>{ track.style.transform=`translate3d(${S.x.toFixed(2)}px,0,0)` };
+  /* While pressed or dragging the auto-scroll pauses so the card the
+     customer is aiming at doesn't slide out from under their finger. */
   const frame=(now)=>{
     if(S.dead)return;
     const dt=Math.min(now-S.lastFrame,50);
     S.lastFrame=now;
-    if(!S.dragging){
+    if(!S.pressed && !S.dragging){
       if(S.released){
         const idle=now-S.releasedAt;
         if(idle<3000){
@@ -1677,43 +1696,65 @@ function setupBestCarousel(){
     }
     S.raf=requestAnimationFrame(frame);
   };
-  const onDown=e=>{
-    if(e.pointerType==='mouse'&&e.button!==0)return;
-    S.dragging=true;S.axisLocked=null;
-    S.startX=e.clientX;S.startY=e.clientY;
-    S.lastX=e.clientX;S.lastT=performance.now();
-    S.dragDist=0;S.vx=0;
+  const commitDrag=(e)=>{
+    S.dragging=true;
+    S.axisLocked='x';
     marquee.classList.add('dragging');
     try{marquee.setPointerCapture(e.pointerId)}catch(_){}
   };
-  const onMove=e=>{
-    if(!S.dragging)return;
-    const dx=e.clientX-S.lastX;
-    const totalDx=e.clientX-S.startX;
-    const totalDy=e.clientY-S.startY;
-    if(S.axisLocked===null){
-      if(Math.abs(totalDx)>6||Math.abs(totalDy)>6){
-        S.axisLocked=Math.abs(totalDx)>=Math.abs(totalDy)?'x':'y';
-      }
-    }
-    if(S.axisLocked==='y'){
-      S.dragging=false;marquee.classList.remove('dragging');
-      try{marquee.releasePointerCapture(e.pointerId)}catch(_){}
+  const onDown=e=>{
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    /* Pointerdown INSIDE a button — don't even engage the carousel drag
+       machinery, let the button handle the tap end-to-end. Buttons still
+       benefit from the auto-scroll pause below because we set pressed. */
+    if(e.target.closest('button, a')){
+      S.pressed=true;      // pause auto-scroll while the finger is down
+      S.pointerId=e.pointerId;
+      S.startX=e.clientX; S.startY=e.clientY;
+      S.startT=performance.now();
       return;
     }
-    if(S.axisLocked==='x'){
-      S.dragDist+=Math.abs(dx);
-      S.x+=dx;wrap();apply();
-      const now=performance.now();
-      const dt=Math.max(now-S.lastT,1);
-      S.vx=dx/dt;
-      S.lastX=e.clientX;S.lastT=now;
-      if(e.cancelable)e.preventDefault();
+    S.pressed=true; S.dragging=false; S.axisLocked=null;
+    S.pointerId=e.pointerId;
+    S.startX=e.clientX; S.startY=e.clientY; S.startT=performance.now();
+    S.lastX=e.clientX; S.lastT=performance.now();
+    S.dragDist=0; S.vx=0;
+  };
+  const onMove=e=>{
+    if(!S.pressed && !S.dragging) return;
+    const totalDx=e.clientX-S.startX;
+    const totalDy=e.clientY-S.startY;
+    /* Not yet a drag — decide based on displacement + time. */
+    if(!S.dragging){
+      const dist = Math.hypot(totalDx, totalDy);
+      const elapsed = performance.now() - S.startT;
+      if(dist < DRAG_THRESHOLD_PX && elapsed < TAP_MAX_MS) return;
+      /* Axis check: if the movement is dominantly vertical, the user is
+         scrolling the page; hand pointer control back so the browser
+         scrolls normally. */
+      if(Math.abs(totalDy) > Math.abs(totalDx) && dist >= DRAG_THRESHOLD_PX){
+        S.axisLocked='y';
+        S.pressed=false;
+        return;
+      }
+      commitDrag(e);
+      /* Kick S.lastX to now so the first dx of the drag doesn't jump. */
+      S.lastX=e.clientX; S.lastT=performance.now();
     }
+    /* Actively dragging on the x-axis. */
+    const dx=e.clientX-S.lastX;
+    S.dragDist+=Math.abs(dx);
+    S.x+=dx;wrap();apply();
+    const now=performance.now();
+    const dt=Math.max(now-S.lastT,1);
+    S.vx=dx/dt;
+    S.lastX=e.clientX;S.lastT=now;
+    if(e.cancelable)e.preventDefault();
   };
   const onUp=e=>{
-    if(!S.dragging&&S.axisLocked!=='y')return;
+    if(!S.pressed && !S.dragging) return;
     const wasDragging=S.dragging;
+    S.pressed=false;
     S.dragging=false;
     marquee.classList.remove('dragging');
     try{marquee.releasePointerCapture(e.pointerId)}catch(_){}
@@ -1721,19 +1762,30 @@ function setupBestCarousel(){
       S.releasedAt=performance.now();
       S.released=true;
       S.vx=Math.max(-3,Math.min(3,S.vx));
+      /* Ghost-click suppression: after a real drag the browser fires a
+         click event on release. Set a flag consumed once by the capture
+         handler so the click never navigates. */
+      S.suppressNextClick=true;
+      /* Clear the flag on the next tick if no click actually fires (some
+         browsers skip the click on rapid pointer releases). */
+      setTimeout(()=>{ S.suppressNextClick=false; }, 400);
     }
   };
   const onClickCapture=e=>{
-    if(S.dragDist>10){
-      e.stopPropagation();e.stopImmediatePropagation();e.preventDefault();
+    if(S.suppressNextClick || S.dragDist > DRAG_THRESHOLD_PX){
+      e.stopPropagation(); e.stopImmediatePropagation(); e.preventDefault();
+      S.suppressNextClick=false;
     }
     S.dragDist=0;
   };
   const onCardClick=e=>{
+    /* If the click landed on a button or link inside a card, let its own
+       handler run — do NOT navigate to the product page. */
+    if(e.target.closest('button, a')) return;
     const c=e.target.closest('.bs-card');
-    if(!c)return;
+    if(!c) return;
     const pid=+c.dataset.pid;
-    if(pid)go('product',pid);
+    if(pid) go('product',pid);
   };
   marquee.addEventListener('pointerdown',onDown);
   marquee.addEventListener('pointermove',onMove);
