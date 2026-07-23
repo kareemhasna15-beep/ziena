@@ -360,6 +360,27 @@ html[dir="rtl"] .tbd-chip{letter-spacing:0;font-size:.68rem}
 .checkout-err .btn{padding:6px 14px;font-size:.78rem}
 .co-summary .line{display:flex;justify-content:space-between;padding:3px 0}
 .co-summary .tot{font-weight:700;color:var(--plum);border-top:1px solid var(--blush-2);margin-top:8px;padding-top:8px}
+/* Checkout item cards — replace plain-text lines in the order summary.
+   Small thumbnail on the leading side, name + size/color + qty, price
+   and × on the trailing side. Uses inset-inline-* so the layout mirrors
+   cleanly in RTL. */
+.co-items{display:flex;flex-direction:column;gap:8px;margin:10px 0 12px}
+.co-card{display:flex;align-items:center;gap:12px;padding:10px;background:#fff;border:1.5px solid var(--blush-2);border-radius:12px;cursor:pointer;transition:.18s;position:relative}
+.co-card:hover{border-color:var(--magenta);transform:translateY(-1px);box-shadow:0 6px 18px rgba(140,13,84,.06)}
+.co-card:focus-visible{outline:2px solid var(--magenta);outline-offset:2px}
+.co-card-art{width:56px;height:56px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--blush);display:flex;align-items:center;justify-content:center}
+.co-card-art img{width:100%;height:100%;object-fit:cover}
+.co-card-art svg{width:30px;height:30px}
+.co-card-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.co-card-name{font-size:.86rem;font-weight:600;color:var(--plum);line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.co-card-meta{display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--ink-soft);flex-wrap:wrap}
+.co-card-qty{font-weight:600;color:var(--plum)}
+.co-card-color{display:inline-flex;align-items:center;gap:4px;font-size:.74rem}
+.co-card-color-sw{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.08)}
+.co-card-price{margin-inline-start:auto;color:var(--magenta);font-weight:700;font-size:.9rem;flex-shrink:0;padding-inline-start:8px}
+.co-card-rm{background:transparent;border:none;color:var(--ink-soft);cursor:pointer;font-size:1.2rem;line-height:1;padding:6px 8px;border-radius:50%;transition:.15s;flex-shrink:0;align-self:flex-start}
+.co-card-rm:hover{background:#FEE2E2;color:var(--bad)}
+.co-card-rm:focus-visible{outline:2px solid var(--magenta);outline-offset:2px}
 
 /* ── About/contact/footer ── */
 .about{background:var(--plum);color:#fff;text-align:center}
@@ -1255,6 +1276,24 @@ function lineName(p, color){
   const base = pname(p);
   return color ? base + ' — ' + colorLabel(color) : base;
 }
+/* Cart-line thumbnail — the size-specific photo if the line is a variant
+   sibling, else the primary's main image. */
+function lineThumb(p){
+  return (p && p.img) || '';
+}
+/* Given a cart-line key, open its product page with the exact selection
+   (size + color) pre-applied. Used by both the drawer and checkout cards.
+   Round-trips through go() → the hash carries `?size=&color=` so a share
+   or reload preserves the selection. */
+function openCartLineProduct(cartKeyStr){
+  const {pid, colorSlug} = parseCartKey(cartKeyStr);
+  const line = byId(pid); if(!line) return;
+  const primary = primaryOf(line);
+  const opts = {};
+  if (primary && line && String(primary.id) !== String(line.id)) opts.size = line.id;
+  if (colorSlug) opts.color = colorSlug;
+  go('product', primary ? primary.id : pid, Object.keys(opts).length ? opts : null);
+}
 
 /* ── Discount helpers ── */
 function activeDiscount(p){
@@ -1352,11 +1391,30 @@ function annotateVariants(list){
       labelEn:v.variantLabelEn||v.en, labelAr:v.variantLabelAr||v.ar,
       p:v.p, img:v.img||primary.img, images:v.images.length?v.images:primary.images
     }));
-    for(let i=1;i<grp.length;i++)grp[i].isVariantChild=true;
+    /* Back-references on children → the primary they belong to. Lets the
+       cart / drawer / deep-link URL builder find "which product page do I
+       open?" for a sibling row without another DB scan. */
+    for(let i=1;i<grp.length;i++){ grp[i].isVariantChild=true; grp[i].primaryId=primary.id; }
+    primary.primaryId=primary.id;
   });
   return list;
 }
 const visibleDB=()=>DB.filter(p=>!p.isVariantChild);
+/* Given a cart-line product (may be a variant sibling), return the primary
+   product that owns the product-detail page. Bare products without variants
+   are their own primary. */
+function primaryOf(p){
+  if(!p) return null;
+  if(!p.variantGroup || p.isVariantPrimary) return p;
+  return byId(p.primaryId) || p;
+}
+/* Index of a child in its primary's variants[] array. 0 means no size
+   variant or "the primary itself". */
+function variantIxOfChild(primary, childId){
+  if(!primary || !Array.isArray(primary.variants)) return 0;
+  const ix = primary.variants.findIndex(v => String(v.id) === String(childId));
+  return ix >= 0 ? ix : 0;
+}
 const vlabel=v=>LANG==='en'?v.labelEn:v.labelAr;
 async function loadProducts(){
   if(DEMO){ if(!DB.length){ DB=SEED.map(p=>({img:'',images:[],sku:'',variantGroup:null,...p})); annotateVariants(DB);} return true; }
@@ -1420,6 +1478,18 @@ function addToCart(id,qty=1,btn,colorSlug){
   if(btn){btn.classList.add('added');const old=btn.innerHTML;btn.innerHTML=t('added');setTimeout(()=>{btn.classList.remove('added');btn.innerHTML=old;},1400);}
 }
 function setQty(key,q){ if(q<=0)delete cart[key];else cart[key]=q; saveCart();renderCartBadge();renderDrawer(); if(VIEW==='checkout')renderCheckout(); }
+/* Remove a cart line entirely (used by the × on checkout item cards).
+   Live-re-renders the checkout so subtotal / delivery / total pick up
+   the change without a page reload. If the cart empties, renderCheckout
+   swaps to the empty-cart state on its own. */
+function removeCartLine(key){
+  if(!(key in cart)) return;
+  delete cart[key];
+  saveCart();
+  renderCartBadge();
+  renderDrawer();
+  if(VIEW==='checkout') renderCheckout();
+}
 function cartCount(){return Object.values(cart).reduce((a,b)=>a+b,0)}
 /* Cart total = sum of effective (discounted) priced lines. Falls back to
    the original price when no discount is active. TBD lines are skipped.
@@ -1456,16 +1526,19 @@ function renderDrawer(){
     const swatch = color
       ? `<span class="c-swatch" style="background:${esc(color.hex)}" title="${esc(colorLabel(color))}"></span> <span class="c-color">${esc(colorLabel(color))}</span>`
       : '';
+    /* The card image + name area routes to the product page with the
+       exact selection restored (deep-link). Quantity controls stopPropagation
+       so tapping them doesn't navigate. */
     return `
     <div class="c-item">
-      <div class="c-art ${p.g}">${p.img?`<img src="${esc(resolveImage(p.img))}" alt="">`:(icons[p.i]||icons.mug)}</div>
+      <div class="c-art ${p.g}" role="button" tabindex="0" onclick="openCartLineProduct('${esc(key)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCartLineProduct('${esc(key)}')}">${p.img?`<img src="${esc(resolveImage(p.img))}" alt="">`:(icons[p.i]||icons.mug)}</div>
       <div class="c-info">
-        <h4>${esc(pname(p))}</h4>
+        <h4 style="cursor:pointer" onclick="openCartLineProduct('${esc(key)}')">${esc(pname(p))}</h4>
         ${swatch?`<div class="c-color-line">${swatch}</div>`:''}
         <div class="p">${fmtPrice(p.p)}</div>
         <div class="c-qty">
-          <button onclick="setQty('${esc(key)}',${q-1})">−</button><span>${q}</span><button onclick="setQty('${esc(key)}',${q+1})">+</button>
-          <button class="c-rm" onclick="setQty('${esc(key)}',0)">${t('remove')}</button>
+          <button onclick="event.stopPropagation();setQty('${esc(key)}',${q-1})">−</button><span>${q}</span><button onclick="event.stopPropagation();setQty('${esc(key)}',${q+1})">+</button>
+          <button class="c-rm" onclick="event.stopPropagation();setQty('${esc(key)}',0)">${t('remove')}</button>
         </div>
       </div>
     </div>`;
@@ -1737,7 +1810,7 @@ function prodCardHighlight(p,q){
 function renderHome(){renderStatic();renderBest();renderCats();renderChips();renderProducts();renderCartBadge();initHeroCoin();}
 
 /* ── PRODUCT PAGE ── */
-function renderProductPage(id){
+function renderProductPage(id, opts){
   const p=byId(id);
   if(!p){go('home');return}
   PD_CURRENT=p; PD_VARIANT_IX=0; PD_COLOR_SLUG=null;
@@ -1746,13 +1819,24 @@ function renderProductPage(id){
   const alsoCats=alsoMap[p.c]||[];
   const also=vis.filter(x=>alsoCats.includes(x.c)).sort((a,b)=>(b.best?1:0)-(a.best?1:0)).slice(0,4);
   const hasVariants=p.isVariantPrimary && Array.isArray(p.variants) && p.variants.length>1;
-  const initialVariant=hasVariants?p.variants[0]:null;
-  const initialImg=initialVariant?initialVariant.img:p.img;
+  /* Deep-link opts (size=<siblingId>, color=<slug>) restore the exact
+     cart-line selection when the customer taps their line in the cart
+     drawer or checkout summary. Missing/invalid params degrade to the
+     defaults (variant 0, no color). */
+  let initialVariantIx = 0;
+  if (hasVariants && opts && opts.size) {
+    const wantId = String(opts.size);
+    const ix = p.variants.findIndex(v => String(v.id) === wantId);
+    if (ix > 0) initialVariantIx = ix;
+  }
+  PD_VARIANT_IX = initialVariantIx;
+  const initialVariant = hasVariants ? p.variants[initialVariantIx] : null;
+  const initialImg = initialVariant ? initialVariant.img : p.img;
   const pillsHtml=hasVariants?`
     <div class="pd-variants" role="radiogroup" aria-label="${LANG==='ar'?'الحجم':'Size'}">
       <span class="pd-variants-label">${LANG==='ar'?'الحجم':'Size'}:</span>
       <div class="v-pills">
-        ${p.variants.map((v,i)=>`<button type="button" class="v-pill ${i===0?'on':''}" data-vi="${i}" role="radio" aria-checked="${i===0?'true':'false'}" onclick="selectVariant(${p.id},${i})">${esc(vlabel(v))}</button>`).join('')}
+        ${p.variants.map((v,i)=>`<button type="button" class="v-pill ${i===initialVariantIx?'on':''}" data-vi="${i}" role="radio" aria-checked="${i===initialVariantIx?'true':'false'}" onclick="selectVariant(${p.id},${i})">${esc(vlabel(v))}</button>`).join('')}
       </div>
     </div>`:'';
   /* Color swatches — shown when the product has any color options. No
@@ -1789,6 +1873,13 @@ function renderProductPage(id){
     ${similar.length?`<div class="rail-sec"><div class="rail-head"><h2>${t('similar')}</h2></div><div class="rail">${similar.map(prodCard).join('')}</div></div>`:''}
     ${also.length?`<div class="rail-sec"><div class="rail-head"><h2>${t('alsoBuy')}</h2></div><div class="rail">${also.map(prodCard).join('')}</div></div>`:''}
   `;
+  /* Deep-link color pre-select. Done AFTER innerHTML so the swatch nodes
+     exist. selectColor updates PD_COLOR_SLUG, ring highlight, and the
+     live name — nothing else to do here. */
+  if (hasColors && opts && opts.color) {
+    const wantSlug = String(opts.color);
+    if (p.colors.some(c => c.slug === wantSlug)) selectColor(p.id, wantSlug);
+  }
   window.scrollTo({top:0});
 }
 function pdQty(d){
@@ -1901,14 +1992,35 @@ function renderCheckout(){
     <div class="f-group"><label>${t('coNote')}</label><input id="coNote" type="text"></div>
     <div class="co-summary">
       <b>${t('coSummary')}</b>
-      ${entries.map(({p,q,color})=>{
-        const priced = hasPrice(p.p);
-        const right = priced
-          ? fmtPrice(p.p*q)
-          : `<span class="tbd-price">${t('tbdShort')}</span>`;
-        const badge = priced ? '' : ` <span class="tbd-chip">${t('tbdBadge')}</span>`;
-        return `<div class="line"><span>${q} × ${esc(lineName(p,color))}${badge}</span><span>${right}</span></div>`;
-      }).join('')}
+      <div class="co-items">
+        ${entries.map(({key,p,q,color})=>{
+          const priced = hasPrice(p.p);
+          const right = priced
+            ? fmtPrice(p.p*q)
+            : `<span class="tbd-price">${t('tbdShort')}</span>`;
+          const badge = priced ? '' : `<span class="tbd-chip">${t('tbdBadge')}</span>`;
+          const thumb = lineThumb(p);
+          const art = thumb
+            ? `<img src="${esc(resolveImage(thumb))}" alt="${esc(pname(p))}">`
+            : (icons[p.i]||icons.mug);
+          const colorTag = color
+            ? `<span class="co-card-color"><span class="co-card-color-sw" style="background:${esc(color.hex)}"></span>${esc(colorLabel(color))}</span>`
+            : '';
+          const rmLabel = LANG==='ar' ? 'إزالة' : 'Remove';
+          return `<div class="co-card" role="button" tabindex="0" onclick="openCartLineProduct('${esc(key)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCartLineProduct('${esc(key)}')}">
+            <div class="co-card-art">${art}</div>
+            <div class="co-card-body">
+              <div class="co-card-name">${esc(lineName(p,color))} ${badge}</div>
+              <div class="co-card-meta">
+                <span class="co-card-qty">× ${q}</span>
+                ${colorTag}
+              </div>
+            </div>
+            <div class="co-card-price">${right}</div>
+            <button class="co-card-rm" type="button" aria-label="${esc(rmLabel)}" onclick="event.stopPropagation();removeCartLine('${esc(key)}')">×</button>
+          </div>`;
+        }).join('')}
+      </div>
       <div class="line"><span>${t('coSubtotal')}</span><span id="coSubtotalVal">${fmtPriceTotal()}</span></div>
       <div class="line"><span>${t('coDelivery')}</span><span id="coDeliveryVal">${fmtDeliveryFee(CHECKOUT_CITY)}</span></div>
       <div class="line tot"><span>${totalLabel}</span><span id="coTotalVal">${fmtCheckoutTotal(CHECKOUT_CITY)}</span></div>
@@ -2513,7 +2625,7 @@ function setDocTitle(){
   } else if(VIEW==='checkout') suffix=LANG==='ar'?'إتمام الطلب':'Checkout';
   document.title = suffix ? `${suffix} · ${base}` : base;
 }
-function go(view,arg){
+function go(view,arg,opts){
   VIEW=view;
   ALL_VIEWS.forEach(v=>{
     const el=document.getElementById('view-'+v);
@@ -2526,7 +2638,20 @@ function go(view,arg){
     if(arg){setTimeout(()=>{const el=document.getElementById(arg);if(el)el.scrollIntoView({behavior:'smooth'});},60);}
     else window.scrollTo({top:0});
   }
-  if(view==='product'){ if(location.hash!=='#product-'+arg) location.hash='product-'+arg; renderProductPage(arg);}
+  if(view==='product'){
+    /* Build the hash with optional ?size=<siblingId>&color=<slug> query so
+       a shared cart-line link restores the exact selection on reload.
+       Normal navigation without opts round-trips as before. */
+    let wantHash = '#product-' + arg;
+    if (opts && (opts.size || opts.color)) {
+      const qs = new URLSearchParams();
+      if (opts.size)  qs.set('size',  String(opts.size));
+      if (opts.color) qs.set('color', String(opts.color));
+      wantHash += '?' + qs.toString();
+    }
+    if (location.hash !== wantHash) location.hash = wantHash;
+    renderProductPage(arg, opts);
+  }
   if(view==='checkout'){ if(location.hash!=='#checkout') location.hash='checkout'; renderCheckout();window.scrollTo({top:0});}
   if(view==='categories'){ if(location.hash!=='#categories') location.hash='categories'; renderCategoriesView(); window.scrollTo({top:0}); }
   if(view==='category'){
@@ -2540,7 +2665,19 @@ function hashRoute(){
   const h=location.hash;
   if(h==='#search'){ openSearch(true); return; }
   else if(SEARCH_OPEN){ closeSearch(true); }
-  if(h.startsWith('#product-')){ if(VIEW!=='product'||h!==('#product-'+(PD_CURRENT&&PD_CURRENT.id))) go('product',h.replace('#product-','')); return; }
+  if(h.startsWith('#product-')){
+    /* Parse `#product-<id>[?size=<siblingId>&color=<slug>]`. Missing or
+       malformed query = plain product-page open with no preselection. */
+    const raw = h.replace('#product-','');
+    const qIx = raw.indexOf('?');
+    const idPart = qIx >= 0 ? raw.slice(0, qIx) : raw;
+    const qs = qIx >= 0 ? new URLSearchParams(raw.slice(qIx + 1)) : null;
+    const opts = qs ? { size: qs.get('size') || null, color: qs.get('color') || null } : null;
+    if (VIEW !== 'product' || h !== '#product-' + (PD_CURRENT && PD_CURRENT.id) || opts) {
+      go('product', idPart, opts);
+    }
+    return;
+  }
   if(h==='#checkout'){ if(VIEW!=='checkout') go('checkout'); return; }
   if(h==='#categories'){ if(VIEW!=='categories') go('categories'); return; }
   if(h.startsWith('#category/')){
