@@ -3,3 +3,11 @@ products.json
 ~$*.xlsx
 .DS_Store
 Thumbs.db
+
+# Local backups (never commit)
+backup/
+
+# Working Excel sheets that live in website_images/ but aren't shipped
+website_images/*.xlsx
+website_images/*.json
+items-list.xlsx
