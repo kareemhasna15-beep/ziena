@@ -11,3 +11,7 @@ backup/
 website_images/*.xlsx
 website_images/*.json
 items-list.xlsx
+
+# Scripts working data (underscore-prefixed = local only)
+scripts/_*
+scripts/import-manifest.json
