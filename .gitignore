@@ -15,3 +15,11 @@ items-list.xlsx
 # Scripts working data (underscore-prefixed = local only)
 scripts/_*
 scripts/import-manifest.json
+
+# Raw camera/phone exports — kept locally as safety copy of the pre-optimize
+# originals. Never committed; the website serves the optimized website_images/.
+website_images_originals/
+
+# Node deps for local image-optimization tooling
+node_modules/
+package-lock.json
