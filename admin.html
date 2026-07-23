@@ -320,6 +320,19 @@ function resolveImage(v){
 }
 /* Back-compat aliases so existing sites don't break. */
 const imgSrc = resolveImage;
+/* Admin previews use the pre-generated 400px thumbnails when the source
+   is inside the shipped website_images/ folder — massive bandwidth saving
+   for the product list on slow connections. Supabase-storage URLs (from
+   uploads) don't have thumb siblings so they pass through unchanged. */
+function adminThumbSrc(src){
+  const url = resolveImage(src);
+  if (!url || !url.includes('website_images/')) return url;
+  if (url.includes('/thumbs/')) return url;
+  const thumbed = url.replace(/website_images\/(?!thumbs\/)/, 'website_images/thumbs/');
+  /* Prefer the WebP sibling when it's a jpg/png; falls back naturally via
+     the browser if the file isn't there (older builds). */
+  return thumbed.replace(/\.(jpe?g|png)$/i, '.webp');
+}
 const parseImages=raw=>String(raw||'').split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
 const productImages=p=>Array.isArray(p.images)?p.images:(p.image_url?[p.image_url]:[]);
 const cname=id=>{const c=categories.find(c=>c.id===id);return c?c.en:id};
@@ -811,7 +824,13 @@ async function loadImageFromBlob(blob){
     im.src=url;
   });
 }
-async function compressImage(file,maxDim=1600,quality=0.82){
+async function compressImage(file,maxDim=1200,quality=0.78){
+  /* Client-side resize + JPEG re-encode before upload so newly uploaded
+     photos land in storage already optimized — matches the max-1200px /
+     ~78 quality profile the storefront optimizer uses on the tracked
+     website_images/ folder. Falls back to the raw file if canvas throws
+     (e.g. huge HEIC that decode-fails), so a bad file never blocks the
+     upload flow. */
   try{
     const im=await loadImageFromBlob(file);
     let w=im.naturalWidth,h=im.naturalHeight;
@@ -846,7 +865,7 @@ function paintImgManager(){
     <div class="img-tile" draggable="true" data-ix="${i}"
       ondragstart="imgDragStart(event,${i})" ondragover="imgDragOver(event,${i})"
       ondragleave="imgDragLeave(event,${i})" ondrop="imgDrop(event,${i})" ondragend="imgDragEnd(event)">
-      <img src="${esc(resolveImage(src))}" alt="" loading="lazy">
+      <img src="${esc(adminThumbSrc(src))}" alt="" loading="lazy" decoding="async">
       ${i===0?'<span class="badge-main">MAIN</span>':''}
       <button type="button" class="rm" title="Remove" onclick="removeEditImage(${i})">×</button>
     </div>`).join('')+`
@@ -956,7 +975,7 @@ function reviewCardHtml(r){
   const catSel = categories.map(c=>`<option value="${c.id}" ${r.category===c.id?'selected':''}>${c.en}</option>`).join('');
   return `
   <div class="review-card ${r.mode||'new'} ${r.status==='confirmed'?'done':''} ${r.status==='skipped'?'skipped':''}" data-rid="${r.rid}">
-    <div class="review-thumb ${r.imgPreview?'':'no-photo'}">${r.imgPreview?`<img src="${esc(resolveImage(r.imgPreview))}" alt="">`:''}</div>
+    <div class="review-thumb ${r.imgPreview?'':'no-photo'}">${r.imgPreview?`<img src="${esc(adminThumbSrc(r.imgPreview))}" alt="" loading="lazy" decoding="async">`:''}</div>
     <div>
       <span class="review-badge ${badge}">${label}</span>
       ${r.mode==='update' && r.existing ? `
@@ -1507,7 +1526,7 @@ function renderPhotoSlot(i){
       ondragstart="slotDragStart(event,${i})" ondragover="slotDragOver(event,${i})"
       ondragleave="slotDragLeave(event)" ondrop="slotDrop(event,${i})" ondragend="slotDragEnd(event)"
       onclick="pickSlotUpload(${i})">
-      <img src="${esc(resolveImage(src))}" alt="">
+      <img src="${esc(adminThumbSrc(src))}" alt="" loading="lazy" decoding="async">
       ${isMain?'<span class="badge">MAIN</span>':''}
       ${sizeBadge}
       <button type="button" class="rm" onclick="event.stopPropagation();removeSlot(${i})" title="Remove">×</button>

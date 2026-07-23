@@ -198,8 +198,9 @@ html[dir="rtl"] .coin-label{font-family:'Tajawal',sans-serif;font-weight:600;fon
 @media(prefers-reduced-motion:reduce){.marquee{overflow-x:auto;mask-image:none;-webkit-mask-image:none;cursor:auto}.hero-plate{animation:none}}
 .bs-card{width:250px;flex-shrink:0;background:#fff;border-radius:var(--radius);border:1px solid var(--blush-2);box-shadow:var(--shadow);overflow:hidden;transition:.3s;cursor:pointer;min-width:0}
 .bs-card:hover{transform:translateY(-6px);border-color:var(--gold-soft)}
-.bs-art{height:150px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.bs-art{height:150px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:var(--blush)}
 .bs-art svg{width:66px;height:66px}
+.bs-art picture{display:contents}
 .bs-art img{width:100%;height:100%;object-fit:cover}
 .bs-rank{position:absolute;top:12px;inset-inline-start:12px;background:var(--magenta);color:#fff;font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600;padding:5px 11px;border-radius:999px;z-index:2}
 html[dir="rtl"] .bs-rank{letter-spacing:0}
@@ -240,8 +241,9 @@ html[dir="rtl"] .bs-rank{letter-spacing:0}
 .prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:20px}
 .prod{background:#fff;border:1px solid var(--blush-2);border-radius:var(--radius);overflow:hidden;transition:.3s;display:flex;flex-direction:column;min-width:0}
 .prod:hover{box-shadow:var(--shadow);transform:translateY(-4px);border-color:var(--gold-soft)}
-.prod-art{height:140px;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;overflow:hidden}
+.prod-art{height:140px;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;overflow:hidden;background:var(--blush)}
 .prod-art svg{width:56px;height:56px}
+.prod-art picture{display:contents}
 .prod-art img{width:100%;height:100%;object-fit:cover}
 .tag-best{position:absolute;top:10px;inset-inline-end:10px;background:var(--gold);color:#fff;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600;padding:4px 10px;border-radius:999px;z-index:2}
 html[dir="rtl"] .tag-best{letter-spacing:0}
@@ -270,7 +272,8 @@ html[dir="rtl"] .tag-disc{font-family:'Tajawal',sans-serif}
 .pd-grid{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:start}
 .pd-visual{border-radius:24px;border:1px solid var(--blush-2);min-height:380px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);position:relative;overflow:hidden}
 .pd-visual svg{width:160px;height:160px}
-.pd-img-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.pd-img-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--blush)}
+.pd-img-wrap picture{display:contents}
 .pd-img-wrap img{width:100%;height:100%;object-fit:cover;transition:opacity .22s ease}
 .pd-img-wrap img.swap{opacity:0}
 .pd-variants{margin:14px 0 4px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -325,7 +328,8 @@ html[dir="rtl"] .drawer{transform:translateX(-100%)}
 .drawer-close{background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--ink-soft);line-height:1}
 .drawer-items{flex:1;overflow-y:auto;padding:16px 22px}
 .c-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--blush)}
-.c-art{width:62px;height:62px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.c-art{width:62px;height:62px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--blush)}
+.c-art picture{display:contents}
 .c-art svg{width:34px;height:34px}
 .c-art img{width:100%;height:100%;object-fit:cover}
 .c-info{flex:1;min-width:0}
@@ -369,6 +373,7 @@ html[dir="rtl"] .tbd-chip{letter-spacing:0;font-size:.68rem}
 .co-card:hover{border-color:var(--magenta);transform:translateY(-1px);box-shadow:0 6px 18px rgba(140,13,84,.06)}
 .co-card:focus-visible{outline:2px solid var(--magenta);outline-offset:2px}
 .co-card-art{width:56px;height:56px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--blush);display:flex;align-items:center;justify-content:center}
+.co-card-art picture{display:contents}
 .co-card-art img{width:100%;height:100%;object-fit:cover}
 .co-card-art svg{width:30px;height:30px}
 .co-card-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
@@ -1191,6 +1196,95 @@ function resolveImage(v){
 /* Back-compat alias — kept so any inline template that still says imgSrc() works. */
 const imgSrc = resolveImage;
 
+/* ── Responsive images ──
+   Every source photo has 4 variants on disk (see scripts/optimize-images.mjs):
+     · website_images/<stem>.<ext>          — optimized fallback (JPG/PNG)
+     · website_images/<stem>.webp           — full-size WebP (~80 quality)
+     · website_images/thumbs/<stem>.<ext>   — 400px fallback
+     · website_images/thumbs/<stem>.webp    — 400px WebP
+   The DB still stores just the fallback path (`.jpg`/`.png`). These helpers
+   derive the other URLs from that stored value at render time — nothing in
+   the schema needs to change. WebP support is ~96%+ globally so almost
+   every visitor gets the tiny file; the fallback covers the rest without
+   any JS feature-detection. */
+function toWebp(url) {
+  return String(url || '').replace(/\.(jpe?g|png)(\?|$)/i, '.webp$2');
+}
+function toThumb(url) {
+  const s = String(url || '');
+  /* Only rewrite paths inside website_images/. External URLs (Supabase
+     storage, data: URIs) pass through unchanged so uploads still work. */
+  if (!s || !s.includes('website_images/')) return s;
+  return s.replace(/website_images\/(?!thumbs\/)/, 'website_images/thumbs/');
+}
+/**
+ * Build a responsive <picture> element for a stored image path.
+ *
+ * @param {string} path — value as stored in DB / images[] (bare filename or absolute URL)
+ * @param {object} opts
+ *   thumb  — use the 400px thumb variant (cards / carousels / cart)
+ *   alt    — accessible alt text
+ *   cls    — class list for the <img>
+ *   eager  — loading=eager + fetchpriority=high (hero / first fold)
+ *   width, height — pixel hints so browsers can reserve space and avoid CLS
+ *   sizes  — media-query hint for srcset (default undefined = intrinsic)
+ */
+function pictureFor(path, opts) {
+  opts = opts || {};
+  const raw = resolveImage(path);
+  if (!raw) return '';
+  /* External / storage URLs (Supabase) don't have webp siblings; render a
+     plain <img> so we don't break existing image storage flows. */
+  if (!raw.includes('website_images/') && !raw.startsWith(IMG_BASE)) {
+    return plainImgFor(raw, opts);
+  }
+  const fallback = opts.thumb ? toThumb(raw) : raw;
+  const webp     = toWebp(fallback);
+  const alt      = esc(opts.alt || '');
+  const cls      = opts.cls ? ` class="${esc(opts.cls)}"` : '';
+  const idAttr   = opts.id ? ` id="${esc(opts.id)}"` : '';
+  const loading  = opts.eager ? 'eager'  : 'lazy';
+  const decoding = opts.eager ? 'auto'   : 'async';
+  const priority = opts.eager ? ' fetchpriority="high"' : '';
+  const dim      = (opts.width && opts.height) ? ` width="${opts.width}" height="${opts.height}"` : '';
+  const styleAR  = opts.aspectRatio ? ` style="aspect-ratio:${opts.aspectRatio}"` : '';
+  return `<picture>
+    <source srcset="${esc(webp)}" type="image/webp">
+    <img${idAttr} src="${esc(fallback)}" alt="${alt}"${cls} loading="${loading}" decoding="${decoding}"${priority}${dim}${styleAR}>
+  </picture>`;
+}
+function plainImgFor(url, opts) {
+  const alt      = esc(opts.alt || '');
+  const cls      = opts.cls ? ` class="${esc(opts.cls)}"` : '';
+  const idAttr   = opts.id ? ` id="${esc(opts.id)}"` : '';
+  const loading  = opts.eager ? 'eager'  : 'lazy';
+  const decoding = opts.eager ? 'auto'   : 'async';
+  const priority = opts.eager ? ' fetchpriority="high"' : '';
+  const dim      = (opts.width && opts.height) ? ` width="${opts.width}" height="${opts.height}"` : '';
+  return `<img${idAttr} src="${esc(url)}" alt="${alt}"${cls} loading="${loading}" decoding="${decoding}"${priority}${dim}>`;
+}
+/* Insert a <link rel="preload"> for the given image (used on product page
+   render so the first meaningful paint has the hero photo ready). Reuses
+   the same variant (thumb / full, WebP / fallback) as pictureFor. */
+function preloadImage(path, opts) {
+  opts = opts || {};
+  const raw = resolveImage(path);
+  if (!raw || !raw.includes('website_images/')) return;
+  const fallback = opts.thumb ? toThumb(raw) : raw;
+  const webp     = toWebp(fallback);
+  const head     = document.head;
+  /* Prefer WebP; browsers that can't render it just ignore the type hint. */
+  const already  = head.querySelector('link[rel="preload"][data-zeina-pre]');
+  if (already) already.remove();
+  const link = document.createElement('link');
+  link.rel = 'preload';
+  link.as  = 'image';
+  link.href = webp;
+  link.type = 'image/webp';
+  link.setAttribute('data-zeina-pre', '1');
+  head.appendChild(link);
+}
+
 /* ── State ── */
 let DB=[], cart=store.get('zeina_cart')||{};
 let LANG='en', CUR='USD', FILTER='all', adminTab='dash', editingId=null, pickedIcon='mug', VIEW='home', SESSION=null;
@@ -1554,7 +1648,7 @@ function renderDrawer(){
        so tapping them doesn't navigate. */
     return `
     <div class="c-item">
-      <div class="c-art ${p.g}" role="button" tabindex="0" onclick="openCartLineProduct('${esc(key)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCartLineProduct('${esc(key)}')}">${p.img?`<img src="${esc(resolveImage(p.img))}" alt="">`:(icons[p.i]||icons.mug)}</div>
+      <div class="c-art ${p.g}" role="button" tabindex="0" onclick="openCartLineProduct('${esc(key)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCartLineProduct('${esc(key)}')}">${p.img?pictureFor(p.img,{thumb:true,alt:''}):(icons[p.i]||icons.mug)}</div>
       <div class="c-info">
         <h4 style="cursor:pointer" onclick="openCartLineProduct('${esc(key)}')">${esc(pname(p))}</h4>
         ${swatch?`<div class="c-color-line">${swatch}</div>`:''}
@@ -1570,7 +1664,11 @@ function renderDrawer(){
 }
 
 /* ── Cards ── */
-const artInner=p=>p.img?`<img src="${esc(resolveImage(p.img))}" alt="${esc(p.en)}" loading="lazy">`:(icons[p.i]||icons.mug);
+/* Card-sized image: fetches the 400px thumb via <picture> with a WebP
+   source, lazy-loaded, aspect-ratio hint prevents CLS while decoding. */
+const artInner=p=>p.img
+  ? pictureFor(p.img, { thumb:true, alt:p.en })
+  : (icons[p.i]||icons.mug);
 const askBtn=id=>{
   const p=byId(id);
   const nm = p ? (LANG==='ar' ? (p.ar||p.en) : p.en) : '';
@@ -1932,7 +2030,7 @@ function renderProductPage(id, opts){
     <div class="pd-grid" data-primary-id="${p.id}">
       <div class="pd-visual ${p.g}" id="pdVisual" onclick="pdOpenLightbox()">
         ${p.best?`<span class="tag-best" style="top:16px">${p.top?t('top'):t('best')}</span>`:''}
-        <div class="pd-img-wrap">${initialImg?`<img id="pdImg" src="${esc(resolveImage(initialImg))}" alt="${esc(p.en)}" loading="eager">`:(icons[p.i]||icons.mug)}</div>
+        <div class="pd-img-wrap">${initialImg?pictureFor(initialImg,{alt:p.en,eager:true,id:'pdImg'}):(icons[p.i]||icons.mug)}</div>
       </div>
       <div class="pd-info">
         <h1>${esc(pname(p))}</h1>
@@ -1948,6 +2046,9 @@ function renderProductPage(id, opts){
     ${similar.length?`<div class="rail-sec"><div class="rail-head"><h2>${t('similar')}</h2></div><div class="rail">${similar.map(prodCard).join('')}</div></div>`:''}
     ${also.length?`<div class="rail-sec"><div class="rail-head"><h2>${t('alsoBuy')}</h2></div><div class="rail">${also.map(prodCard).join('')}</div></div>`:''}
   `;
+  /* Preload the hero image so the first paint has it ready even if the
+     <img loading=eager> hasn't been discovered yet. */
+  if (initialImg) preloadImage(initialImg, { thumb:false });
   /* Deep-link color pre-select. Done AFTER innerHTML so the swatch nodes
      exist. selectColor updates PD_COLOR_SLUG, ring highlight, and the
      live name — nothing else to do here. */
@@ -2010,7 +2111,7 @@ function selectVariant(primaryId,ix){
   const wrap=document.querySelector('.pd-img-wrap');
   const targetSrc=v.img||p.img;
   if(!targetSrc){ if(img){img.remove();} wrap.innerHTML=(icons[p.i]||icons.mug); return; }
-  if(!img){ wrap.innerHTML=`<img id="pdImg" src="${esc(resolveImage(targetSrc))}" alt="" loading="eager">`; return; }
+  if(!img){ wrap.innerHTML = pictureFor(targetSrc,{alt:'',eager:true,id:'pdImg'}); return; }
   if(img.getAttribute('src')===targetSrc) return;
   img.classList.add('swap');
   const pre=new Image();
@@ -2076,7 +2177,7 @@ function renderCheckout(){
           const badge = priced ? '' : `<span class="tbd-chip">${t('tbdBadge')}</span>`;
           const thumb = lineThumb(p);
           const art = thumb
-            ? `<img src="${esc(resolveImage(thumb))}" alt="${esc(pname(p))}">`
+            ? pictureFor(thumb, {thumb:true, alt:pname(p)})
             : (icons[p.i]||icons.mug);
           const colorTag = color
             ? `<span class="co-card-color"><span class="co-card-color-sw" style="background:${esc(color.hex)}"></span>${esc(colorLabel(color))}</span>`
