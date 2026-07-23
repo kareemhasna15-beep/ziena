@@ -1024,7 +1024,7 @@ const T = {
   coSummary:'Order summary',coSend:'Place order',coHint:'Cash on delivery — no online payment. We will contact you to confirm.',
   coDone:'Order placed!',doneTitle:'Order received! 🎉',doneNo:'Order number',
   doneMsg:'Thank you! We will contact you shortly to confirm delivery. Payment is cash on delivery.',
-  doneWa:'Also send it on WhatsApp (optional)',doneBack:'Back to shop',coFail:'Could not send the order. Please check your connection and try again.',
+  doneWa:'Also send it on WhatsApp (optional)',doneWaOpened:'WhatsApp opened in a new tab · tap to reopen',doneWaBlocked:'Order sent — open WhatsApp confirmation',doneBack:'Back to shop',coFail:'Could not send the order. Please check your connection and try again.',
   waOrder:'Hello Zeina! New order:%0A',waName:'Name',waPhone:'Phone',waCity:'City',waAddr:'Address',waNote:'Note',waTotal:'Total',waDelivery:'Delivery',
   toastAdd:'Added to cart',toastNeed:'Please fill name, phone, city and address',loadFail:'Could not load products. Check your internet and refresh.',
   coSending:'Placing order…',coRetry:'Try again',coTimeout:'Connection is slow. Try again?',
@@ -1061,7 +1061,7 @@ const T = {
   coSummary:'ملخص الطلب',coSend:'تأكيد الطلب',coHint:'الدفع عند الاستلام — لا يوجد دفع إلكتروني. سنتواصل معك للتأكيد.',
   coDone:'تم استلام الطلب!',doneTitle:'تم استلام طلبك! 🎉',doneNo:'رقم الطلب',
   doneMsg:'شكراً لك! سنتواصل معك قريباً لتأكيد التوصيل. الدفع عند الاستلام.',
-  doneWa:'أرسليه أيضاً عبر واتساب (اختياري)',doneBack:'العودة للمتجر',coFail:'تعذّر إرسال الطلب. تحققي من الاتصال وحاولي مجدداً.',
+  doneWa:'أرسليه أيضاً عبر واتساب (اختياري)',doneWaOpened:'واتساب مفتوح في تبويب جديد · اضغطي لإعادة الفتح',doneWaBlocked:'تم إرسال الطلب — افتحي تأكيد واتساب',doneBack:'العودة للمتجر',coFail:'تعذّر إرسال الطلب. تحققي من الاتصال وحاولي مجدداً.',
   waOrder:'مرحباً زينة! طلب جديد:%0A',waName:'الاسم',waPhone:'الهاتف',waCity:'المدينة',waAddr:'العنوان',waNote:'ملاحظة',waTotal:'المجموع',waDelivery:'التوصيل',
   toastAdd:'أُضيفت إلى السلة',toastNeed:'الرجاء تعبئة الاسم والهاتف والمدينة والعنوان',loadFail:'تعذّر تحميل المنتجات. تحققي من الإنترنت وأعيدي التحميل.',
   coSending:'جارٍ إرسال الطلب…',coRetry:'أعيدي المحاولة',coTimeout:'الاتصال بطيء. حاولي مجدداً؟',
@@ -1857,6 +1857,25 @@ async function sendOrder(){
   if(errBox) errBox.innerHTML='';
   let btn = null;
   let originalLabel = '';
+  /* Popup blockers only trust window.open when it's called synchronously
+     inside a real click gesture. Reserve a blank window RIGHT NOW so we
+     can navigate it to wa.me later even after the async place_order RPC.
+     If reserving fails (blocked or unsupported), waWindow stays null and
+     the success screen shows the primary WhatsApp CTA as a fallback. */
+  let waWindow = null;
+  try {
+    waWindow = window.open('about:blank', '_blank', 'noopener,noreferrer');
+    if (waWindow && waWindow.document) {
+      /* Show a friendly placeholder so the user knows something is loading
+         rather than staring at "about:blank". Overwritten once the wa.me
+         URL is set below. */
+      try {
+        waWindow.document.title = 'Zeina — sending your order to WhatsApp…';
+        waWindow.document.body.style.cssText = 'font-family:sans-serif;padding:32px;color:#4A0A30;text-align:center';
+        waWindow.document.body.innerHTML = '<h2 style="color:#BA1270">Zeina</h2><p>Preparing your WhatsApp confirmation…</p>';
+      } catch (_) { /* cross-origin write blocked in some browsers; harmless */ }
+    }
+  } catch (_) { waWindow = null; }
   try {
     /* -------- read_form -------- */
     const nameEl=document.getElementById('coName');
@@ -1995,8 +2014,19 @@ async function sendOrder(){
     });
     msg+=`%0A${t('waDelivery')}: ${deliveryTxt}%0A${t('waTotal')}: ${totalTxt}%0A${t('waName')}: ${encodeURIComponent(name)}%0A${t('waPhone')}: ${encodeURIComponent(phone)}%0A${t('waCity')}: ${encodeURIComponent(LANG==='ar'&&cityRow?cityRow.ar:cityStored)}%0A${t('waAddr')}: ${encodeURIComponent(addr)}`;
     if(note)msg+=`%0A${t('waNote')}: ${encodeURIComponent(note)}`;
+    /* Auto-navigate the reserved WhatsApp window to wa.me. The success
+       screen still shows a button as a fallback (for users on browsers
+       where the tab-focus was lost, or where popups were blocked). */
+    const waLink = `https://wa.me/${WA_NUMBER}?text=${msg}`;
+    let waAutoOpened = false;
+    if (waWindow && !waWindow.closed) {
+      try { waWindow.location.href = waLink; waAutoOpened = true; } catch (_) {
+        try { waWindow.close(); } catch (_) {}
+        waAutoOpened = false;
+      }
+    }
     cart={};saveCart();renderCartBadge();
-    renderOrderDone(orderId,entries,totalTxt,msg);
+    renderOrderDone(orderId,entries,totalTxt,msg,waAutoOpened);
     window.scrollTo({top:0});
 
     /* Fire-and-forget notifications (not in critical path). */
@@ -2004,6 +2034,9 @@ async function sendOrder(){
     setTimeout(()=>sendOrderEmail(orderId, orderPayload, totalTxt, currency, {tbdCount, pricedCount}).catch(e=>console.warn('email failed',e)), 0);
     return;
   } catch(err){
+    /* Close the reserved WhatsApp tab so a failure doesn't leave a blank
+       "Preparing your WhatsApp confirmation…" tab open. */
+    if (waWindow && !waWindow.closed) { try { waWindow.close(); } catch (_) {} }
     const isTimeout = !!(err && err.message && /timeout/i.test(err.message));
     const code = (err && (err.code || err.status)) || '';
     const msgDetail = (err && err.message) || String(err);
@@ -2229,7 +2262,13 @@ async function sendOrderEmail(orderId, o, totalTxt, currency, extra){
     }
   }
 }
-function renderOrderDone(orderId,entries,totalTxt,waMsg){
+function renderOrderDone(orderId,entries,totalTxt,waMsg,waAutoOpened){
+  /* The WhatsApp CTA styling depends on whether the reserved popup made it
+     through. Auto-opened → ghost secondary "tap to reopen". Blocked → primary
+     "Order sent — open WhatsApp confirmation" so the customer notices. */
+  const waLabel = waAutoOpened ? t('doneWaOpened') : t('doneWaBlocked');
+  const waCls   = waAutoOpened ? 'btn-ghost' : 'btn-primary';
+  const homeCls = waAutoOpened ? 'btn-primary' : 'btn-ghost';
   document.getElementById('coContent').innerHTML=`
     <div style="text-align:center">
       <div style="width:74px;height:74px;border-radius:50%;background:var(--blush);border:2px solid var(--magenta);display:flex;align-items:center;justify-content:center;margin:0 auto 18px">
@@ -2248,8 +2287,8 @@ function renderOrderDone(orderId,entries,totalTxt,waMsg){
         <div class="line tot"><span>${entries.some(({p})=>!hasPrice(p.p))?t('totalPriced'):t('total')}</span><span>${totalTxt}</span></div>
       </div>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:6px">
-        <a class="btn btn-ghost" href="https://wa.me/${WA_NUMBER}?text=${waMsg}" target="_blank" rel="noopener">${t('doneWa')}</a>
-        <button class="btn btn-primary" onclick="go('home')">${t('doneBack')}</button>
+        <a class="btn ${waCls}" href="https://wa.me/${WA_NUMBER}?text=${waMsg}" target="_blank" rel="noopener">${waLabel}</a>
+        <button class="btn ${homeCls}" onclick="go('home')">${t('doneBack')}</button>
       </div>
     </div>`;
 }

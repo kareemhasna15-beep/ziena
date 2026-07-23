@@ -244,6 +244,53 @@ GRANT  SELECT, INSERT, UPDATE, DELETE ON TABLE public.orders TO authenticated;
 
 
 -- ══════════════════════════════════════════════════════════════════════════
+-- 10. Task 28 — order-whatsapp webhook (re-included per re-run policy)
+--     AFTER INSERT trigger on orders POSTs to the Edge Function via pg_net.
+--     Trigger no-ops silently until webhook_config.order_whatsapp_url is
+--     seeded, so this SQL is safe to run before the function is deployed.
+-- ══════════════════════════════════════════════════════════════════════════
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+CREATE TABLE IF NOT EXISTS public.webhook_config (
+  name        text PRIMARY KEY,
+  value       text NOT NULL,
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.webhook_config ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.webhook_config FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.notify_order_whatsapp()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_catalog, net
+AS $$
+DECLARE
+  fn_url    text;
+  fn_secret text;
+  req_id    bigint;
+BEGIN
+  SELECT value INTO fn_url    FROM public.webhook_config WHERE name = 'order_whatsapp_url';
+  SELECT value INTO fn_secret FROM public.webhook_config WHERE name = 'order_whatsapp_secret';
+  IF fn_url IS NULL OR fn_url = '' THEN RETURN NEW; END IF;
+  SELECT net.http_post(
+    url     := fn_url,
+    body    := jsonb_build_object('type','INSERT','table','orders','record', row_to_json(NEW)::jsonb),
+    headers := jsonb_build_object('Content-Type','application/json','X-Webhook-Secret', COALESCE(fn_secret,'')),
+    timeout_milliseconds := 5000
+  ) INTO req_id;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS orders_whatsapp_notify ON public.orders;
+CREATE TRIGGER orders_whatsapp_notify
+  AFTER INSERT ON public.orders
+  FOR EACH ROW
+  EXECUTE FUNCTION public.notify_order_whatsapp();
+
+
+-- ══════════════════════════════════════════════════════════════════════════
 -- VERIFY — run this block after the migration; every row should return >0
 -- (or 0 for admin_error_log if nothing has crashed yet, which is fine).
 -- ══════════════════════════════════════════════════════════════════════════
@@ -267,4 +314,8 @@ SELECT
   (SELECT count(*) FROM pg_proc
      WHERE proname='place_order' AND pronamespace='public'::regnamespace) AS place_order_fn_present,
   (SELECT count(*) FROM pg_policies
-     WHERE schemaname='public' AND tablename='orders')                    AS orders_policy_count;
+     WHERE schemaname='public' AND tablename='orders')                    AS orders_policy_count,
+  (SELECT count(*) FROM pg_trigger
+     WHERE tgname='orders_whatsapp_notify' AND NOT tgisinternal)          AS orders_whatsapp_trigger,
+  (SELECT count(*) FROM information_schema.tables
+     WHERE table_schema='public' AND table_name='webhook_config')         AS webhook_config_present;
