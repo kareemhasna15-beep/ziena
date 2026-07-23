@@ -222,6 +222,26 @@ tr:hover td{background:#FDF8FB}
 
 .edit-section{margin-bottom:22px}
 .edit-section h3{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--plum);font-weight:700;margin-bottom:10px;border-bottom:1px solid var(--blush-2);padding-bottom:6px}
+
+/* ── Color picker (Task 29) ── */
+.color-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:8px;border:1.5px dashed var(--blush-2);border-radius:10px;background:#FDFBFC;min-height:38px;align-items:center}
+.color-chips .muted{display:block;text-align:center;width:100%}
+.color-chip{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--blush-2);border-radius:999px;padding:4px 4px 4px 8px;font-size:.78rem;color:var(--plum);font-weight:600}
+.color-chip-sw{display:inline-block;width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.08);flex-shrink:0}
+.color-chip-name{white-space:nowrap}
+.color-chip-ar{color:var(--ink-soft);font-weight:500}
+.color-chip-rm{background:transparent;border:none;color:var(--ink-soft);font-size:1rem;line-height:1;cursor:pointer;padding:2px 6px;border-radius:50%;transition:.15s}
+.color-chip-rm:hover{background:#FEE2E2;color:var(--bad)}
+.color-palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:8px;margin-bottom:12px}
+.color-preset{--sw:#fff;background:transparent;border:none;padding:2px;border-radius:50%;cursor:pointer;line-height:0;transition:.15s;box-shadow:inset 0 0 0 2px transparent}
+.color-preset-dot{display:block;width:100%;aspect-ratio:1;border-radius:50%;background:var(--sw);border:1px solid rgba(0,0,0,.08);transition:.15s}
+.color-preset:hover .color-preset-dot{transform:scale(1.07)}
+.color-preset.on{box-shadow:inset 0 0 0 2px var(--magenta),0 0 0 1px var(--magenta)}
+.color-custom{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;border-radius:10px;background:var(--blush)}
+.color-custom .muted{font-size:.72rem;color:var(--ink-soft);margin-inline-end:4px;flex-shrink:0}
+.color-custom input[type="color"]{width:36px;height:36px;border:1.5px solid var(--blush-2);border-radius:8px;padding:2px;background:#fff;cursor:pointer;flex-shrink:0}
+.color-custom input[type="text"]{padding:9px 11px;border:1.5px solid var(--blush-2);border-radius:8px;background:#fff;font-size:.84rem;font-family:inherit}
+.color-custom input[type="text"]:focus{outline:none;border-color:var(--magenta)}
 </style>
 </head>
 <body>
@@ -1328,6 +1348,42 @@ const SIZE_PRESETS = [
 const DESC_MAX = 600;
 let editSizeDragIx = -1;
 
+/* 24-color preset palette for the product-color picker. Names are catalog
+   voice — short, clear, matched EN + AR. Tapping a swatch adds/removes it
+   from EDIT.colors so the same button toggles selection. Custom colors are
+   added via a separate composer below the grid. */
+const COLOR_PRESETS = [
+  { nameEn:'White',      nameAr:'أبيض',        hex:'#FFFFFF' },
+  { nameEn:'Ivory',      nameAr:'عاجي',         hex:'#F5EFE6' },
+  { nameEn:'Cream',      nameAr:'كريمي',        hex:'#F1E9D2' },
+  { nameEn:'Beige',      nameAr:'بيج',          hex:'#E4D5B7' },
+  { nameEn:'Sand',       nameAr:'رملي',         hex:'#D9C7A5' },
+  { nameEn:'Camel',      nameAr:'جملي',         hex:'#C19A6B' },
+  { nameEn:'Terracotta', nameAr:'ترّاكوتّا',    hex:'#C36F49' },
+  { nameEn:'Rust',       nameAr:'صدأ',          hex:'#A0522D' },
+  { nameEn:'Brown',      nameAr:'بنّي',         hex:'#7B4B2A' },
+  { nameEn:'Chocolate',  nameAr:'شوكولاتة',    hex:'#4E2A1E' },
+  { nameEn:'Charcoal',   nameAr:'فحمي',         hex:'#333333' },
+  { nameEn:'Black',      nameAr:'أسود',         hex:'#111111' },
+  { nameEn:'Silver',     nameAr:'فضّي',         hex:'#C0C0C0' },
+  { nameEn:'Grey',       nameAr:'رمادي',        hex:'#9AA0A6' },
+  { nameEn:'Gold',       nameAr:'ذهبي',         hex:'#C29A4B' },
+  { nameEn:'Rose gold',  nameAr:'ذهبي وردي',   hex:'#B76E79' },
+  { nameEn:'Navy',       nameAr:'كحلي',         hex:'#1B2A49' },
+  { nameEn:'Blue',       nameAr:'أزرق',         hex:'#3D6FB1' },
+  { nameEn:'Sky blue',   nameAr:'سماوي',        hex:'#87CEEB' },
+  { nameEn:'Sage',       nameAr:'مريمية',       hex:'#8FA98A' },
+  { nameEn:'Green',      nameAr:'أخضر',         hex:'#4E7C4A' },
+  { nameEn:'Dusty rose', nameAr:'وردي مُغبّر', hex:'#C48B9F' },
+  { nameEn:'Blush',      nameAr:'زهر خدود',    hex:'#F4C6C2' },
+  { nameEn:'Burgundy',   nameAr:'عنّابي',       hex:'#7B1E3A' }
+];
+function slugColor(nameEn){
+  return String(nameEn||'').toLowerCase()
+    .normalize('NFKD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'color';
+}
+
 function openEditModal(id){
   const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
   editingId=id;
@@ -1382,6 +1438,18 @@ function openEditModal(id){
        deleted between open and save. */
     initialSiblingIds: siblings.map(s=>s.id),
     initialHasSizes:!!p.variant_group,
+    /* Colors: array of { nameEn, nameAr, hex, slug }. Independent from
+       the size/variant system — a product can have both. Load from the
+       jsonb column on the product row. */
+    colors: (Array.isArray(p.colors) ? p.colors : []).map(c => ({
+      nameEn: String(c.name_en || ''),
+      nameAr: String(c.name_ar || c.name_en || ''),
+      hex:    String(c.hex || '#000000'),
+      slug:   slugColor(c.name_en)
+    })).filter(c => c.nameEn && c.hex),
+    hasColors: Array.isArray(p.colors) && p.colors.length > 0,
+    /* Custom-color composer state (bottom of the palette). */
+    colorDraft: { nameEn:'', nameAr:'', hex:'#C48B9F' },
     dirty:false, saving:false
   };
   /* Copy sibling photos into shared slots 1..N-1 if those slots are empty.
@@ -1481,6 +1549,32 @@ function paintEditModal(){
     </div>
     <div class="size-rows">${sizeRows}</div>
     <button type="button" class="size-add" onclick="addSizeRow()">+ Add size</button>` : '';
+
+  /* ── Colors palette ──
+     Selected chips at the top (removable); preset grid below is tap-to-toggle
+     with the palette's EN + AR names pre-filled; custom composer at the bottom.
+     Slug uniqueness is enforced so two "Black" entries can't collide even if
+     the admin taps twice. */
+  const chipHtml = (s.colors||[]).map((c,ix)=>`
+    <span class="color-chip" title="${esc(c.nameEn)}">
+      <span class="color-chip-sw" style="background:${esc(c.hex)}"></span>
+      <span class="color-chip-name">${esc(c.nameEn)}<span class="color-chip-ar" dir="rtl"> · ${esc(c.nameAr||c.nameEn)}</span></span>
+      <button type="button" class="color-chip-rm" onclick="removeColor(${ix})" aria-label="Remove ${esc(c.nameEn)}">×</button>
+    </span>`).join('');
+  const paletteHtml = COLOR_PRESETS.map(pr=>{
+    const isOn = (s.colors||[]).some(c=>c.slug===slugColor(pr.nameEn));
+    return `<button type="button" class="color-preset ${isOn?'on':''}" style="--sw:${esc(pr.hex)}" title="${esc(pr.nameEn)} · ${esc(pr.nameAr)}" onclick="toggleColorPreset(${COLOR_PRESETS.indexOf(pr)})"><span class="color-preset-dot"></span></button>`;
+  }).join('');
+  const colorBlock = s.hasColors ? `
+    <div class="color-chips">${chipHtml || '<span class="muted" style="font-size:.78rem">No colors picked yet. Tap a swatch below or add a custom one.</span>'}</div>
+    <div class="color-palette">${paletteHtml}</div>
+    <div class="color-custom">
+      <span class="muted" style="font-size:.72rem">Custom:</span>
+      <input type="color" value="${esc(s.colorDraft.hex||'#C48B9F')}" oninput="EDIT.colorDraft.hex=this.value" title="Pick a hex">
+      <input type="text" placeholder="Name EN" value="${esc(s.colorDraft.nameEn||'')}" oninput="EDIT.colorDraft.nameEn=this.value" style="flex:1;min-width:110px">
+      <input type="text" dir="rtl" placeholder="Name AR" value="${esc(s.colorDraft.nameAr||'')}" oninput="EDIT.colorDraft.nameAr=this.value" style="flex:1;min-width:110px">
+      <button type="button" class="btn btn-g" onclick="addCustomColor()">+ Add</button>
+    </div>` : '';
   /* Photo hint reflects the actual mapping now that size count is variable. */
   let photoHint;
   if(!s.hasSizes){
@@ -1514,6 +1608,21 @@ function paintEditModal(){
         </label>
       </div>
       ${sizeBlock}
+    </div>
+
+    <div class="edit-section">
+      <h3>Colors</h3>
+      <div class="size-toggle">
+        <div class="size-toggle-info">
+          <b>Offer color options</b>
+          <div class="muted">Turn on if the product ships in multiple colors. Each color becomes its own line on the customer's cart and order — no separate SKU per color required.</div>
+        </div>
+        <label class="size-switch">
+          <input type="checkbox" id="colorToggle" ${s.hasColors?'checked':''} onchange="onColorToggle(this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+      ${colorBlock}
     </div>
 
     <div class="edit-section">
@@ -1552,6 +1661,58 @@ function paintEditModal(){
       inp.value=''; editSlotIx=-1;
     };
   }
+}
+function onColorToggle(on){
+  if(!EDIT) return;
+  if(!on && (EDIT.colors||[]).length){
+    if(!confirm(`Remove ALL ${EDIT.colors.length} color option${EDIT.colors.length===1?'':'s'}? Existing orders keep their color info; this just stops offering colors on new orders.`)){
+      document.getElementById('colorToggle').checked = true;
+      return;
+    }
+    EDIT.colors = [];
+  }
+  EDIT.hasColors = on;
+  EDIT.dirty = true;
+  paintEditModal();
+}
+function toggleColorPreset(ix){
+  if(!EDIT) return;
+  const pr = COLOR_PRESETS[ix]; if(!pr) return;
+  const slug = slugColor(pr.nameEn);
+  EDIT.colors = EDIT.colors || [];
+  const existing = EDIT.colors.findIndex(c => c.slug === slug);
+  if(existing >= 0){
+    EDIT.colors.splice(existing, 1);
+  } else {
+    EDIT.colors.push({ nameEn: pr.nameEn, nameAr: pr.nameAr, hex: pr.hex, slug });
+  }
+  EDIT.dirty = true;
+  paintEditModal();
+}
+function removeColor(ix){
+  if(!EDIT || !EDIT.colors) return;
+  EDIT.colors.splice(ix, 1);
+  EDIT.dirty = true;
+  paintEditModal();
+}
+function addCustomColor(){
+  if(!EDIT) return;
+  const d = EDIT.colorDraft || {};
+  const nameEn = (d.nameEn||'').trim();
+  const nameAr = (d.nameAr||'').trim() || nameEn;
+  const hex = (d.hex||'').trim();
+  if(!nameEn || !/^#[0-9a-f]{3,8}$/i.test(hex)){
+    toast('Enter a name and a valid hex color'); return;
+  }
+  const slug = slugColor(nameEn);
+  EDIT.colors = EDIT.colors || [];
+  if(EDIT.colors.some(c => c.slug === slug)){
+    toast('That color name is already in the list'); return;
+  }
+  EDIT.colors.push({ nameEn, nameAr, hex, slug });
+  EDIT.colorDraft = { nameEn:'', nameAr:'', hex };
+  EDIT.dirty = true;
+  paintEditModal();
 }
 function onSizeToggle(on){
   if(!EDIT) return;
@@ -1760,6 +1921,21 @@ async function saveEditModal(){
        variant_label_en/ar and the storefront picker reads it from there.
        Siblings get "<base> — <label>" so the admin product list can tell them
        apart at a glance. */
+    /* Colors: only persist when the admin has the toggle on, otherwise
+       write an empty array so removing color options actually sticks.
+       Store the DB-shape keys (name_en/name_ar) — the storefront
+       rowToProduct normalises back to camelCase. */
+    const colorsPayload = (s.hasColors && Array.isArray(s.colors))
+      ? s.colors
+          .filter(c => c && c.nameEn && c.hex)
+          .map(c => ({ name_en: c.nameEn.trim(), name_ar: (c.nameAr||'').trim() || c.nameEn.trim(), hex: c.hex }))
+      : [];
+    /* Schema-lag guard: if the loaded product row didn't have a `colors`
+       key (SQL migration not applied yet), don't include colors in the
+       payload — the UPDATE would otherwise fail with "column not found".
+       Once supabase_task29_product_colors.sql is run this branch never
+       fires because the column defaults to []. */
+    const colorsColumnExists = p && Object.prototype.hasOwnProperty.call(p, 'colors');
     const primaryPayload={
       en: s.en.trim(),
       ar: s.ar.trim()||null,
@@ -1776,6 +1952,7 @@ async function saveEditModal(){
       variant_label_ar: primaryLabelAr,
       variant_order: s.hasSizes ? 1 : null
     };
+    if(colorsColumnExists) primaryPayload.colors = colorsPayload;
     if(DEMO){
       Object.assign(p, primaryPayload);
       setEditStatus('Saved ✓ (demo)','saved');
@@ -1827,6 +2004,10 @@ async function saveEditModal(){
           variant_label_ar: labelAr,
           variant_order: ix+1
         };
+        /* Siblings never carry their own colors — the primary owns them.
+           Clearing to [] keeps stale color data from surviving on a
+           sibling row. Same schema-lag guard as the primary above. */
+        if(colorsColumnExists) childPayload.colors = [];
         if(row.siblingId){
           keptSiblingIds.add(row.siblingId);
           const {error}=await sb.from('products').update(childPayload).eq('id',row.siblingId);

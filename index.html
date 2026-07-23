@@ -282,6 +282,20 @@ html[dir="rtl"] .pd-variants-label{letter-spacing:0}
 .v-pill.on{background:var(--plum);border-color:var(--plum);color:#fff}
 .v-pill.on:hover{color:#fff}
 .v-pill:focus-visible{outline:2px solid var(--magenta);outline-offset:2px}
+/* Color swatch row on the product detail page. --sw carries the color's
+   hex value so the button fill is per-swatch. The .on state adds a ring
+   using the magenta accent so the current color reads at a glance and
+   works over any hex including near-white. */
+.pd-colors{margin:10px 0 4px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pd-color-name{font-size:.86rem;color:var(--plum);font-weight:600;min-height:1.2em}
+html[dir="rtl"] .pd-color-name{font-weight:700}
+.c-swatches{display:flex;flex-wrap:wrap;gap:8px}
+.c-sw{--sw:#fff;background:transparent;border:none;padding:2px;border-radius:50%;cursor:pointer;line-height:0;transition:.18s;box-shadow:inset 0 0 0 2px transparent}
+.c-sw .c-sw-dot{display:block;width:26px;height:26px;border-radius:50%;background:var(--sw);border:1px solid rgba(0,0,0,.08);transition:.18s}
+.c-sw:hover .c-sw-dot{transform:scale(1.07)}
+.c-sw.on{box-shadow:inset 0 0 0 2px var(--magenta),0 0 0 1px var(--magenta)}
+.c-sw.on .c-sw-dot{transform:scale(1.06)}
+.c-sw:focus-visible{outline:2px solid var(--magenta);outline-offset:3px}
 .pd-info{min-width:0}
 .pd-info h1{font-size:clamp(1.7rem,3.4vw,2.5rem);color:var(--plum);overflow-wrap:break-word}
 .pd-info .ar2{color:var(--ink-soft);margin-top:4px;font-size:1.05rem}
@@ -317,6 +331,8 @@ html[dir="rtl"] .drawer{transform:translateX(-100%)}
 .c-info{flex:1;min-width:0}
 .c-info h4{font-size:.92rem;color:var(--plum);line-height:1.3}
 .c-info .p{color:var(--magenta);font-weight:600;font-size:.88rem;margin-top:2px}
+.c-color-line{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:.76rem;color:var(--ink-soft)}
+.c-swatch{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.08);vertical-align:middle;flex-shrink:0}
 .c-qty{display:flex;align-items:center;gap:8px;margin-top:6px}
 .c-qty button{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--blush-2);background:#fff;cursor:pointer;color:var(--magenta);font-weight:600}
 .c-rm{background:none;border:none;color:var(--bad);cursor:pointer;font-size:.74rem;margin-inline-start:8px}
@@ -1039,7 +1055,7 @@ const T = {
   doneMsg:'Thank you! We will contact you shortly to confirm delivery. Payment is cash on delivery.',
   doneWa:'Also send it on WhatsApp (optional)',doneWaOpened:'WhatsApp opened in a new tab · tap to reopen',doneWaBlocked:'Order sent — open WhatsApp confirmation',doneBack:'Back to shop',coFail:'Could not send the order. Please check your connection and try again.',
   waOrder:'Hello Zeina! New order:%0A',waName:'Name',waPhone:'Phone',waCity:'City',waAddr:'Address',waNote:'Note',waTotal:'Total',waDelivery:'Delivery',
-  toastAdd:'Added to cart',toastNeed:'Please fill name, phone, city and address',loadFail:'Could not load products. Check your internet and refresh.',
+  toastAdd:'Added to cart',toastNeed:'Please fill name, phone, city and address',needColor:'Please pick a color first',loadFail:'Could not load products. Check your internet and refresh.',
   coSending:'Placing order…',coRetry:'Try again',coTimeout:'Connection is slow. Try again?',
   tbdShort:'Price TBD',tbdBadge:'To be priced',
   tbdNoticeSingle:'1 item will be priced separately — we\'ll contact you on WhatsApp before delivery to confirm the price.',
@@ -1076,7 +1092,7 @@ const T = {
   doneMsg:'شكراً لك! سنتواصل معك قريباً لتأكيد التوصيل. الدفع عند الاستلام.',
   doneWa:'أرسليه أيضاً عبر واتساب (اختياري)',doneWaOpened:'واتساب مفتوح في تبويب جديد · اضغطي لإعادة الفتح',doneWaBlocked:'تم إرسال الطلب — افتحي تأكيد واتساب',doneBack:'العودة للمتجر',coFail:'تعذّر إرسال الطلب. تحققي من الاتصال وحاولي مجدداً.',
   waOrder:'مرحباً زينة! طلب جديد:%0A',waName:'الاسم',waPhone:'الهاتف',waCity:'المدينة',waAddr:'العنوان',waNote:'ملاحظة',waTotal:'المجموع',waDelivery:'التوصيل',
-  toastAdd:'أُضيفت إلى السلة',toastNeed:'الرجاء تعبئة الاسم والهاتف والمدينة والعنوان',loadFail:'تعذّر تحميل المنتجات. تحققي من الإنترنت وأعيدي التحميل.',
+  toastAdd:'أُضيفت إلى السلة',toastNeed:'الرجاء تعبئة الاسم والهاتف والمدينة والعنوان',needColor:'الرجاء اختيار اللون أولاً',loadFail:'تعذّر تحميل المنتجات. تحققي من الإنترنت وأعيدي التحميل.',
   coSending:'جارٍ إرسال الطلب…',coRetry:'أعيدي المحاولة',coTimeout:'الاتصال بطيء. حاولي مجدداً؟',
   tbdShort:'قيد التسعير',tbdBadge:'قيد التسعير',
   tbdNoticeSingle:'قطعة واحدة سيتم تسعيرها بشكل منفصل — سنتواصل معك عبر واتساب قبل التوصيل لتأكيد السعر.',
@@ -1142,7 +1158,7 @@ const imgSrc = resolveImage;
 /* ── State ── */
 let DB=[], cart=store.get('zeina_cart')||{};
 let LANG='en', CUR='USD', FILTER='all', adminTab='dash', editingId=null, pickedIcon='mug', VIEW='home', SESSION=null;
-let PD_CURRENT=null, PD_VARIANT_IX=0;
+let PD_CURRENT=null, PD_VARIANT_IX=0, PD_COLOR_SLUG=null;
 let COLLECTION_SEARCH='';
 let COLLECTION_DEBOUNCE=null;
 /* Persist the last-picked city so a customer coming back doesn't have to
@@ -1176,6 +1192,22 @@ function cartablePrice(p){return hasPrice(p&&p.p)}
 function rowToProduct(r){
   const arr=Array.isArray(r.images)?r.images:(r.image_url?[r.image_url]:[]);
   const images=arr.map(imgSrc).filter(Boolean);
+  /* Colors is an optional jsonb array on the DB row. Each entry gets a
+     slug (from the EN name) so cart keys can safely embed the choice
+     without special characters. `hex` is stored as-is; the swatch UI
+     will normalise. */
+  const rawColors = Array.isArray(r.colors) ? r.colors : [];
+  const colors = rawColors
+    .filter(c => c && typeof c === 'object' && c.name_en && c.hex)
+    .map(c => ({
+      nameEn: String(c.name_en),
+      nameAr: c.name_ar ? String(c.name_ar) : String(c.name_en),
+      hex:    String(c.hex),
+      slug:   slug(c.name_en)
+    }))
+    /* Guard against duplicate slugs — first occurrence wins so admin
+       edits are stable across re-saves. */
+    .filter((c, i, all) => all.findIndex(x => x.slug === c.slug) === i);
   return {
     id:r.id, sku:r.sku||'', barcode:r.barcode||'',
     en:r.en, ar:r.ar, c:r.category, sub:r.sub_category||'',
@@ -1189,8 +1221,39 @@ function rowToProduct(r){
     variantGroup:r.variant_group||null,
     variantLabelEn:r.variant_label_en||null,
     variantLabelAr:r.variant_label_ar||null,
-    variantOrder:r.variant_order==null?null:+r.variant_order
+    variantOrder:r.variant_order==null?null:+r.variant_order,
+    colors
   };
+}
+
+/* Cart keys: a product without color options uses its bare id ('12').
+   A product with colors uses a composite key ('12#dusty-rose') so two
+   colors of the same product become two cart lines. All cart-touching
+   code goes through these helpers so the composite format stays in one
+   place. */
+const CART_KEY_SEP = '#';
+function cartKey(pid, colorSlug){
+  return colorSlug ? String(pid) + CART_KEY_SEP + colorSlug : String(pid);
+}
+function parseCartKey(key){
+  const s = String(key);
+  const i = s.indexOf(CART_KEY_SEP);
+  if (i < 0) return { pid: s, colorSlug: null };
+  return { pid: s.slice(0, i), colorSlug: s.slice(i + 1) };
+}
+function findColor(p, colorSlug){
+  if (!colorSlug || !p || !Array.isArray(p.colors)) return null;
+  return p.colors.find(c => c.slug === colorSlug) || null;
+}
+function colorLabel(c){
+  if (!c) return '';
+  return LANG === 'ar' ? (c.nameAr || c.nameEn) : c.nameEn;
+}
+/* Cart-line display name incl. color suffix. Used everywhere a customer
+   sees a cart line: drawer, checkout summary, confirmation WA message. */
+function lineName(p, color){
+  const base = pname(p);
+  return color ? base + ' — ' + colorLabel(color) : base;
 }
 
 /* ── Discount helpers ── */
@@ -1335,26 +1398,43 @@ function toast(msg){
 }
 
 /* ── Cart ── */
-function addToCart(id,qty=1,btn){
+/* addToCart accepts an optional colorSlug so the same product in two
+   colors becomes two independent cart lines. Products that HAVE color
+   options require a slug — omitting it toasts and returns (the PD view
+   pre-validates and the drawer '+' button always knows the slug). */
+function addToCart(id,qty=1,btn,colorSlug){
   const p=byId(id);
   if(!p||!hasPrice(p.p)){toast(t('contactPrice'));return}
-  cart[id]=(cart[id]||0)+qty;saveCart();renderCartBadge();renderDrawer();
+  if (Array.isArray(p.colors) && p.colors.length && !colorSlug){
+    toast(t('needColor'));
+    return;
+  }
+  if (colorSlug && !findColor(p, colorSlug)){
+    /* Slug refers to a color the product doesn't offer any more — ignore
+       silently rather than adding an orphan line. */
+    return;
+  }
+  const key = cartKey(id, colorSlug);
+  cart[key]=(cart[key]||0)+qty;saveCart();renderCartBadge();renderDrawer();
   toast(t('toastAdd'));
   if(btn){btn.classList.add('added');const old=btn.innerHTML;btn.innerHTML=t('added');setTimeout(()=>{btn.classList.remove('added');btn.innerHTML=old;},1400);}
 }
-function setQty(id,q){ if(q<=0)delete cart[id];else cart[id]=q; saveCart();renderCartBadge();renderDrawer(); if(VIEW==='checkout')renderCheckout(); }
+function setQty(key,q){ if(q<=0)delete cart[key];else cart[key]=q; saveCart();renderCartBadge();renderDrawer(); if(VIEW==='checkout')renderCheckout(); }
 function cartCount(){return Object.values(cart).reduce((a,b)=>a+b,0)}
 /* Cart total = sum of effective (discounted) priced lines. Falls back to
-   the original price when no discount is active. TBD lines are skipped. */
-function cartTotal(){return Object.entries(cart).reduce((s,[id,q])=>{
-  const p=byId(id);
+   the original price when no discount is active. TBD lines are skipped.
+   Iterates composite keys so colored and un-colored lines both count. */
+function cartTotal(){return Object.entries(cart).reduce((s,[key,q])=>{
+  const {pid} = parseCartKey(key);
+  const p=byId(pid);
   if(!p || !hasPrice(p.p)) return s;
   const eff = effectivePrice(p);
   const unit = eff!=null ? eff : +p.p;
   return s + priceVal(+unit) * q;
 },0)}
-function cartOriginalTotal(){return Object.entries(cart).reduce((s,[id,q])=>{
-  const p=byId(id);
+function cartOriginalTotal(){return Object.entries(cart).reduce((s,[key,q])=>{
+  const {pid} = parseCartKey(key);
+  const p=byId(pid);
   return (p && hasPrice(p.p)) ? s + priceVal(+p.p) * q : s;
 },0)}
 function renderCartBadge(){document.getElementById('cartCount').textContent=cartCount()}
@@ -1365,20 +1445,31 @@ function toggleCart(open){
 }
 function renderDrawer(){
   const box=document.getElementById('drawerItems');
-  const entries=Object.entries(cart).map(([id,q])=>({p:byId(id),q})).filter(x=>x.p);
+  const entries=Object.entries(cart).map(([key,q])=>{
+    const {pid, colorSlug} = parseCartKey(key);
+    const p = byId(pid);
+    if (!p) return null;
+    return { key, p, q, color: findColor(p, colorSlug) };
+  }).filter(Boolean);
   if(!entries.length){box.innerHTML=`<div class="empty">${t('emptyCart')}</div>`;}
-  else box.innerHTML=entries.map(({p,q})=>`
+  else box.innerHTML=entries.map(({key,p,q,color})=>{
+    const swatch = color
+      ? `<span class="c-swatch" style="background:${esc(color.hex)}" title="${esc(colorLabel(color))}"></span> <span class="c-color">${esc(colorLabel(color))}</span>`
+      : '';
+    return `
     <div class="c-item">
       <div class="c-art ${p.g}">${p.img?`<img src="${esc(resolveImage(p.img))}" alt="">`:(icons[p.i]||icons.mug)}</div>
       <div class="c-info">
         <h4>${esc(pname(p))}</h4>
+        ${swatch?`<div class="c-color-line">${swatch}</div>`:''}
         <div class="p">${fmtPrice(p.p)}</div>
         <div class="c-qty">
-          <button onclick="setQty(${p.id},${q-1})">−</button><span>${q}</span><button onclick="setQty(${p.id},${q+1})">+</button>
-          <button class="c-rm" onclick="setQty(${p.id},0)">${t('remove')}</button>
+          <button onclick="setQty('${esc(key)}',${q-1})">−</button><span>${q}</span><button onclick="setQty('${esc(key)}',${q+1})">+</button>
+          <button class="c-rm" onclick="setQty('${esc(key)}',0)">${t('remove')}</button>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   document.getElementById('drawerTotal').textContent=fmtPriceTotal();
 }
 
@@ -1395,6 +1486,13 @@ const askBtn=id=>{
 const addBtn=id=>{
   const p=byId(id);
   if(!hasPrice(p&&p.p)) return askBtn(id);
+  /* If the product has color options, the "+" quick-add on a card would
+     be ambiguous — route to the detail page instead so the customer can
+     pick a color and any size before adding. */
+  if (p && Array.isArray(p.colors) && p.colors.length) {
+    return `<button class="btn-add" onclick="event.stopPropagation();go('product',${id})">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>${t('addCart')}</button>`;
+  }
   return `<button class="btn-add" onclick="event.stopPropagation();addToCart(${id},1,this)">
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>${t('addCart')}</button>`;
 };
@@ -1642,7 +1740,7 @@ function renderHome(){renderStatic();renderBest();renderCats();renderChips();ren
 function renderProductPage(id){
   const p=byId(id);
   if(!p){go('home');return}
-  PD_CURRENT=p; PD_VARIANT_IX=0;
+  PD_CURRENT=p; PD_VARIANT_IX=0; PD_COLOR_SLUG=null;
   const vis=visibleDB();
   const similar=vis.filter(x=>x.c===p.c&&x.id!==p.id).slice(0,4);
   const alsoCats=alsoMap[p.c]||[];
@@ -1657,6 +1755,19 @@ function renderProductPage(id){
         ${p.variants.map((v,i)=>`<button type="button" class="v-pill ${i===0?'on':''}" data-vi="${i}" role="radio" aria-checked="${i===0?'true':'false'}" onclick="selectVariant(${p.id},${i})">${esc(vlabel(v))}</button>`).join('')}
       </div>
     </div>`:'';
+  /* Color swatches — shown when the product has any color options. No
+     default selection: forcing the customer to tap makes the choice
+     unambiguous in cart + order, and lets us hard-require it before
+     Add to cart succeeds. */
+  const hasColors = Array.isArray(p.colors) && p.colors.length > 0;
+  const colorsHtml = hasColors ? `
+    <div class="pd-colors" role="radiogroup" aria-label="${LANG==='ar'?'اللون':'Color'}">
+      <span class="pd-variants-label">${LANG==='ar'?'اللون':'Color'}:</span>
+      <div class="c-swatches" id="pdColorRow">
+        ${p.colors.map((c,i)=>`<button type="button" class="c-sw" data-slug="${esc(c.slug)}" style="--sw:${esc(c.hex)}" title="${esc(colorLabel(c))}" role="radio" aria-checked="false" onclick="selectColor(${p.id},'${esc(c.slug)}')"><span class="c-sw-dot"></span></button>`).join('')}
+      </div>
+      <span class="pd-color-name" id="pdColorName" aria-live="polite"></span>
+    </div>` : '';
   document.getElementById('pdContent').innerHTML=`
     <div class="crumb"><a onclick="go('home')">${t('backHome')}</a> / <a onclick="FILTER='${p.c}';go('home','catalog');renderChips();renderProducts()">${cname(p.c)}</a> / ${esc(pname(p))}</div>
     <div class="pd-grid" data-primary-id="${p.id}">
@@ -1670,8 +1781,9 @@ function renderProductPage(id){
         <span class="cat-link" onclick="FILTER='${p.c}';go('home','catalog');renderChips();renderProducts()">${cname(p.c)}</span>
         ${pdesc(p) ? `<p class="pd-desc" dir="${LANG==='ar'?'rtl':'ltr'}">${esc(pdesc(p))}</p>` : ''}
         ${pillsHtml}
+        ${colorsHtml}
         <div class="pd-price" id="pdPrice">${pdPriceHtml(hasVariants?initialVariant:p, p)}</div>
-        <div class="pd-row" id="pdRow">${pdCtaHtml(hasVariants?initialVariant:p)}</div>
+        <div class="pd-row" id="pdRow">${pdCtaHtml(hasVariants?initialVariant:p, p)}</div>
       </div>
     </div>
     ${similar.length?`<div class="rail-sec"><div class="rail-head"><h2>${t('similar')}</h2></div><div class="rail">${similar.map(prodCard).join('')}</div></div>`:''}
@@ -1696,14 +1808,30 @@ function pdPriceHtml(target, primary){
   }
   return fmtPrice(target.p);
 }
-function pdCtaHtml(target){
+function pdCtaHtml(target, primary){
   const nm = byId(target.id) ? pname(byId(target.id)) : (target.en||'');
   const opener = LANG==='ar' ? 'مرحباً زينة! أودّ الاستفسار عن' : "Hi Zeina! I'd like to ask about";
   const askUrl=`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`${opener}: ${nm}${target.sku?` (${target.sku})`:''}`)}`;
+  /* When the primary product carries color options, the "Add to cart"
+     button reads window.PD_COLOR_SLUG at click-time so switching size
+     doesn't reset the color choice. addToCart validates and toasts if
+     no color has been picked yet. */
   if(hasPrice(target.p)) return `<div class="qty"><button onclick="pdQty(-1)">−</button><span id="pdQty">1</span><button onclick="pdQty(1)">+</button></div>
-    <button class="btn btn-primary" onclick="addToCart(${target.id},parseInt(document.getElementById('pdQty').textContent),this)">${t('addCart')}</button>`;
+    <button class="btn btn-primary" onclick="addToCart(${target.id},parseInt(document.getElementById('pdQty').textContent),this,window.PD_COLOR_SLUG)">${t('addCart')}</button>`;
   return `<a class="btn btn-inquire-lg" href="${askUrl}" target="_blank" rel="noopener">
     <svg viewBox="0 0 32 32" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M16 3C9.4 3 4 8.3 4 14.9c0 2.6.9 5 2.3 7L4 29l7.3-2.3c1.9 1 4 1.6 6.2 1.6 6.6 0 12-5.3 12-11.9S22.6 3 16 3zm5.9 16.9c-.3.8-1.5 1.5-2.4 1.7-.6.1-1.4.2-4.2-.9-3.5-1.5-5.8-5-6-5.3-.2-.2-1.4-1.9-1.4-3.6s.9-2.6 1.2-2.9c.3-.3.7-.4 1-.4h.7c.2 0 .5-.1.8.6.3.8 1 2.6 1.1 2.8.1.2.2.4 0 .7-.1.3-.2.4-.4.7l-.6.7c-.2.2-.4.4-.2.8.2.4 1 1.7 2.2 2.7 1.5 1.3 2.8 1.8 3.2 2 .4.2.6.1.9-.1.2-.3 1-1.2 1.3-1.6.3-.4.5-.3.9-.2.4.1 2.4 1.1 2.8 1.3.4.2.7.3.8.5.1.1.1.9-.2 1.5z"/></svg>${t('askWa')}</a>`;
+}
+function selectColor(primaryId, slug){
+  const p = byId(primaryId); if(!p) return;
+  const color = findColor(p, slug); if(!color) return;
+  PD_COLOR_SLUG = slug;
+  document.querySelectorAll('#pdColorRow .c-sw').forEach(el => {
+    const on = el.dataset.slug === slug;
+    el.classList.toggle('on', on);
+    el.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+  const nameEl = document.getElementById('pdColorName');
+  if (nameEl) nameEl.textContent = colorLabel(color);
 }
 function selectVariant(primaryId,ix){
   const p=byId(primaryId); if(!p||!p.variants) return;
@@ -1711,7 +1839,7 @@ function selectVariant(primaryId,ix){
   PD_VARIANT_IX=ix;
   document.querySelectorAll('.v-pill').forEach((el,i)=>{el.classList.toggle('on',i===ix);el.setAttribute('aria-checked',i===ix?'true':'false')});
   document.getElementById('pdPrice').innerHTML=pdPriceHtml(v, p);
-  document.getElementById('pdRow').innerHTML=pdCtaHtml(v);
+  document.getElementById('pdRow').innerHTML=pdCtaHtml(v, p);
   const img=document.getElementById('pdImg');
   const wrap=document.querySelector('.pd-img-wrap');
   const targetSrc=v.img||p.img;
@@ -1727,7 +1855,12 @@ function selectVariant(primaryId,ix){
 
 /* ── CHECKOUT ── */
 function renderCheckout(){
-  const entries=Object.entries(cart).map(([id,q])=>({p:byId(id),q})).filter(x=>x.p);
+  const entries=Object.entries(cart).map(([key,q])=>{
+    const {pid, colorSlug} = parseCartKey(key);
+    const p = byId(pid);
+    if(!p) return null;
+    return { key, p, q, color: findColor(p, colorSlug) };
+  }).filter(Boolean);
   const box=document.getElementById('coContent');
   if(!entries.length){box.innerHTML=`<h2>${t('coTitle')}</h2><div class="empty">${t('emptyCart')}</div>
     <a class="btn btn-primary" onclick="go('home','catalog')">${t('navCatalog')}</a>`;return}
@@ -1768,13 +1901,13 @@ function renderCheckout(){
     <div class="f-group"><label>${t('coNote')}</label><input id="coNote" type="text"></div>
     <div class="co-summary">
       <b>${t('coSummary')}</b>
-      ${entries.map(({p,q})=>{
+      ${entries.map(({p,q,color})=>{
         const priced = hasPrice(p.p);
         const right = priced
           ? fmtPrice(p.p*q)
           : `<span class="tbd-price">${t('tbdShort')}</span>`;
         const badge = priced ? '' : ` <span class="tbd-chip">${t('tbdBadge')}</span>`;
-        return `<div class="line"><span>${q} × ${esc(pname(p))}${badge}</span><span>${right}</span></div>`;
+        return `<div class="line"><span>${q} × ${esc(lineName(p,color))}${badge}</span><span>${right}</span></div>`;
       }).join('')}
       <div class="line"><span>${t('coSubtotal')}</span><span id="coSubtotalVal">${fmtPriceTotal()}</span></div>
       <div class="line"><span>${t('coDelivery')}</span><span id="coDeliveryVal">${fmtDeliveryFee(CHECKOUT_CITY)}</span></div>
@@ -1931,16 +2064,28 @@ async function sendOrder(){
 
     /* -------- build_items -------- */
     step = 'build_items';
-    const entries=Object.entries(cart).map(([id,q])=>({p:byId(id),q})).filter(x=>x.p);
+    const entries=Object.entries(cart).map(([key,q])=>{
+      const {pid, colorSlug} = parseCartKey(key);
+      const p = byId(pid);
+      if(!p) return null;
+      return { key, p, q, color: findColor(p, colorSlug) };
+    }).filter(Boolean);
     /* CRITICAL:
        - Priced products: unit is a finite number (never NaN).
        - TBD ('Contact for price') products: unit AND line are explicit null
          and tbd:true. Downstream JSON.stringify(null) → null (valid); NaN
-         would blow up the .total column (was Postgres error 23502). */
-    const items = entries.map(({p,q}) => {
+         would blow up the .total column (was Postgres error 23502).
+       - The item name gets the chosen color suffixed (EN copy always, so
+         reports and the admin view are language-independent). The color
+         object also lands in item.color so downstream consumers can render
+         a swatch without re-parsing the name. */
+    const items = entries.map(({p,q,color}) => {
+      const suffixedNameEn = color ? p.en + ' — ' + color.nameEn : p.en;
       const priced = hasPrice(p.p);
+      const base = { pid:p.id, sku:p.sku||'', name:suffixedNameEn, qty:q };
+      if (color) base.color = { name_en: color.nameEn, name_ar: color.nameAr, hex: color.hex, slug: color.slug };
       if(!priced){
-        return { pid:p.id, sku:p.sku||'', name:p.en, qty:q, unit:null, line:null, tbd:true };
+        return { ...base, unit:null, line:null, tbd:true };
       }
       const discPct = activeDiscount(p);
       const effRaw = effectivePrice(p);
@@ -1948,7 +2093,7 @@ async function sendOrder(){
       const origUnit = +priceVal(+p.p).toFixed(2);
       const unit = +priceVal(eff).toFixed(2);
       const item = {
-        pid:p.id, sku:p.sku||'', name:p.en, qty:q,
+        ...base,
         unit, line: +(unit*q).toFixed(2), tbd:false
       };
       if(discPct > 0){
@@ -2018,11 +2163,12 @@ async function sendOrder(){
     /* -------- confirmation (post-insert; failure here does NOT roll back the order) -------- */
     step = 'confirmation';
     let msg=t('waOrder');
-    entries.forEach(({p,q})=>{
+    entries.forEach(({p,q,color})=>{
+      const nm = encodeURIComponent(color ? p.en + ' — ' + color.nameEn : p.en);
       if(hasPrice(p.p)){
-        msg += `• ${q} × ${p.en} — $${(priceVal(+p.p)*q).toFixed(2)}%0A`;
+        msg += `• ${q} × ${nm} — $${(priceVal(+p.p)*q).toFixed(2)}%0A`;
       } else {
-        msg += `• ${q} × ${p.en} — ${t('tbdShort')}%0A`;
+        msg += `• ${q} × ${nm} — ${t('tbdShort')}%0A`;
       }
     });
     msg+=`%0A${t('waDelivery')}: ${deliveryTxt}%0A${t('waTotal')}: ${totalTxt}%0A${t('waName')}: ${encodeURIComponent(name)}%0A${t('waPhone')}: ${encodeURIComponent(phone)}%0A${t('waCity')}: ${encodeURIComponent(LANG==='ar'&&cityRow?cityRow.ar:cityStored)}%0A${t('waAddr')}: ${encodeURIComponent(addr)}`;
@@ -2291,11 +2437,11 @@ function renderOrderDone(orderId,entries,totalTxt,waMsg,waAutoOpened){
       <p style="color:var(--ink-soft);margin:8px 0 4px">${t('doneNo')}: <b style="color:var(--magenta)">#${orderId}</b></p>
       <p style="color:var(--ink-soft);max-width:44ch;margin:0 auto 22px">${t('doneMsg')}</p>
       <div class="co-summary" style="text-align:start">
-        ${entries.map(({p,q})=>{
+        ${entries.map(({p,q,color})=>{
           const priced = hasPrice(p.p);
           const right = priced ? fmtPrice(p.p*q) : `<span class="tbd-price">${t('tbdShort')}</span>`;
           const badge = priced ? '' : ` <span class="tbd-chip">${t('tbdBadge')}</span>`;
-          return `<div class="line"><span>${q} × ${esc(pname(p))}${badge}</span><span>${right}</span></div>`;
+          return `<div class="line"><span>${q} × ${esc(lineName(p,color))}${badge}</span><span>${right}</span></div>`;
         }).join('')}
         <div class="line tot"><span>${entries.some(({p})=>!hasPrice(p.p))?t('totalPriced'):t('total')}</span><span>${totalTxt}</span></div>
       </div>

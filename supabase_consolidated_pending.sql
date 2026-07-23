@@ -161,6 +161,16 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_order     integer;
 
 
 -- ══════════════════════════════════════════════════════════════════════════
+-- 7b. products — Task 29 colors (re-included per re-run policy)
+--     Array of { name_en, name_ar, hex }; empty array = no color options.
+-- ══════════════════════════════════════════════════════════════════════════
+ALTER TABLE products ADD COLUMN IF NOT EXISTS colors jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE products DROP CONSTRAINT IF EXISTS products_colors_is_array;
+ALTER TABLE products ADD CONSTRAINT products_colors_is_array
+  CHECK (jsonb_typeof(colors) = 'array');
+
+
+-- ══════════════════════════════════════════════════════════════════════════
 -- 8. Task 25 forward-compat — categories catalog table (empty; storefront
 --    still derives display names from sub_category, so this is purely
 --    additive scaffolding).
@@ -307,7 +317,7 @@ SELECT
      WHERE table_name='products' AND column_name IN
        ('discount_percent','discount_ends_at','description_en',
         'description_ar','sub_category','variant_group','variant_label_en',
-        'variant_label_ar','variant_order'))                              AS products_expected_cols,
+        'variant_label_ar','variant_order','colors'))                     AS products_expected_cols,
   (SELECT count(*) FROM categories)                                       AS categories_rows,
   (SELECT relrowsecurity FROM pg_class
      WHERE relname='orders' AND relnamespace='public'::regnamespace)      AS orders_rls_enabled,
