@@ -2007,10 +2007,19 @@ async function sendOrder(){
      inside a real click gesture. Reserve a blank window RIGHT NOW so we
      can navigate it to wa.me later even after the async place_order RPC.
      If reserving fails (blocked or unsupported), waWindow stays null and
-     the success screen shows the primary WhatsApp CTA as a fallback. */
+     the success screen shows the primary WhatsApp CTA as a fallback.
+
+     BUG-FIX: previously used `'noopener,noreferrer'` as the features arg.
+     Per the HTML spec any window.open call that requests noopener OR
+     noreferrer returns null — so we lost the handle and the blank tab
+     could never be navigated (it just stayed on about:blank forever).
+     Open with an empty features string to keep the handle. wa.me is a
+     trusted origin so the (small) opener risk is acceptable; we still
+     null out `waWindow.opener` before releasing the reference to be
+     safe against future opener-abuse tricks. */
   let waWindow = null;
   try {
-    waWindow = window.open('about:blank', '_blank', 'noopener,noreferrer');
+    waWindow = window.open('about:blank', '_blank');
     if (waWindow && waWindow.document) {
       /* Show a friendly placeholder so the user knows something is loading
          rather than staring at "about:blank". Overwritten once the wa.me
@@ -2162,26 +2171,63 @@ async function sendOrder(){
 
     /* -------- confirmation (post-insert; failure here does NOT roll back the order) -------- */
     step = 'confirmation';
-    let msg=t('waOrder');
-    entries.forEach(({p,q,color})=>{
-      const nm = encodeURIComponent(color ? p.en + ' — ' + color.nameEn : p.en);
-      if(hasPrice(p.p)){
-        msg += `• ${q} × ${nm} — $${(priceVal(+p.p)*q).toFixed(2)}%0A`;
-      } else {
-        msg += `• ${q} × ${nm} — ${t('tbdShort')}%0A`;
-      }
-    });
-    msg+=`%0A${t('waDelivery')}: ${deliveryTxt}%0A${t('waTotal')}: ${totalTxt}%0A${t('waName')}: ${encodeURIComponent(name)}%0A${t('waPhone')}: ${encodeURIComponent(phone)}%0A${t('waCity')}: ${encodeURIComponent(LANG==='ar'&&cityRow?cityRow.ar:cityStored)}%0A${t('waAddr')}: ${encodeURIComponent(addr)}`;
-    if(note)msg+=`%0A${t('waNote')}: ${encodeURIComponent(note)}`;
-    /* Auto-navigate the reserved WhatsApp window to wa.me. The success
-       screen still shows a button as a fallback (for users on browsers
-       where the tab-focus was lost, or where popups were blocked). */
-    const waLink = `https://wa.me/${WA_NUMBER}?text=${msg}`;
+    /* Build the WhatsApp message inside a try/catch so a formatting bug on
+       ANY line (e.g. a product with an unusual character, an entry with a
+       malformed color object, an Arabic-only name that fights
+       encodeURIComponent) can't strand the pre-opened tab on about:blank.
+       Worst case: close the tab and let renderOrderDone fall back to the
+       primary CTA. The order is already saved at this point. */
+    let msg = '';
+    let waLink = '';
+    try {
+      msg = t('waOrder');
+      entries.forEach(({p, q, color}) => {
+        /* Guard each field individually — a bad name in one line must not
+           throw the whole loop. String() coerces null/undefined safely. */
+        const rawName = color ? String(p && p.en || '') + ' — ' + String(color.nameEn || '') : String(p && p.en || '');
+        const nm = encodeURIComponent(rawName);
+        if (hasPrice(p && p.p)) {
+          const priceStr = (priceVal(+p.p) * (+q || 1)).toFixed(2);
+          msg += `• ${q} × ${nm} — $${priceStr}%0A`;
+        } else {
+          msg += `• ${q} × ${nm} — ${t('tbdShort')}%0A`;
+        }
+      });
+      const cityTxt = (LANG === 'ar' && cityRow ? cityRow.ar : cityStored) || '';
+      msg += `%0A${t('waDelivery')}: ${deliveryTxt}` +
+             `%0A${t('waTotal')}: ${totalTxt}` +
+             `%0A${t('waName')}: ${encodeURIComponent(name)}` +
+             `%0A${t('waPhone')}: ${encodeURIComponent(phone)}` +
+             `%0A${t('waCity')}: ${encodeURIComponent(String(cityTxt))}` +
+             `%0A${t('waAddr')}: ${encodeURIComponent(addr)}`;
+      if (note) msg += `%0A${t('waNote')}: ${encodeURIComponent(note)}`;
+      waLink = `https://wa.me/${WA_NUMBER}?text=${msg}`;
+    } catch (fmtErr) {
+      console.warn('[checkout] WhatsApp message build failed — falling back', fmtErr);
+      waLink = '';    // signals "no message ready" below
+      msg = '';
+    }
+    /* Auto-navigate the reserved WhatsApp window to wa.me. If we don't have
+       a waLink (formatting error above) OR the assignment throws, close the
+       blank tab so the customer isn't left staring at about:blank — the
+       success screen's fallback CTA covers them. */
     let waAutoOpened = false;
     if (waWindow && !waWindow.closed) {
-      try { waWindow.location.href = waLink; waAutoOpened = true; } catch (_) {
+      if (waLink) {
+        try {
+          /* Null out opener before navigating cross-origin so the wa.me
+             page can never tabnab our storefront. Some old browsers only
+             respect this before the navigation triggers. */
+          try { waWindow.opener = null; } catch (_) {}
+          waWindow.location.href = waLink;
+          waAutoOpened = true;
+        } catch (navErr) {
+          console.warn('[checkout] WhatsApp tab navigation failed — closing', navErr);
+          try { waWindow.close(); } catch (_) {}
+          waAutoOpened = false;
+        }
+      } else {
         try { waWindow.close(); } catch (_) {}
-        waAutoOpened = false;
       }
     }
     cart={};saveCart();renderCartBadge();
