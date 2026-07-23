@@ -681,10 +681,6 @@ html[dir="rtl"] .splash-hint-txt{letter-spacing:0;text-transform:none;font-size:
   .nav-mobile-controls .wa-btn{width:auto;height:auto;padding:9px 18px;border-radius:999px;gap:8px}
   .nav-mobile-controls .wa-btn svg{width:18px;height:18px}
   .nav-mobile-controls .wa-btn::after{content:attr(data-mobile-label);font-size:.85rem;font-weight:600}
-  /* Floating WA bubble — the primary WA entry on mobile */
-  .wa-float{position:fixed;bottom:22px;inset-inline-end:22px;z-index:60;width:52px;height:52px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(37,211,102,.35),0 3px 8px rgba(0,0,0,.15);transition:transform .2s ease,box-shadow .2s ease}
-  .wa-float:hover,.wa-float:active{transform:scale(1.06);box-shadow:0 10px 26px rgba(37,211,102,.45),0 3px 8px rgba(0,0,0,.2)}
-  .wa-float svg{width:26px;height:26px;fill:#fff}
   /* Tighter header so logo+3 icons breathe */
   :root{--header-h:65px}
   .nav{height:64px;gap:6px}
@@ -704,8 +700,27 @@ html[dir="rtl"] .splash-hint-txt{letter-spacing:0;text-transform:none;font-size:
   .nav{gap:4px}
   .nav-right{gap:4px}
 }
-/* Hide the floating bubble on desktop — it lives in nav there */
-@media(min-width:621px){.wa-float{display:none!important}}
+/* ── Floating WhatsApp button ──
+   Bottom-right on every viewport (LTR and RTL both anchor to right; the
+   button is a globally-known WhatsApp control, not a directional element).
+   Sits above the sticky header (z-index 50) and the drawer scrim, below
+   the search overlay (z-index 80). Auto-hides when the cart drawer is
+   open — the drawer's CTAs need the room, and the header slide-in already
+   exposes the cart from the top so we're not blocking access. */
+.wa-float{position:fixed;bottom:calc(22px + env(safe-area-inset-bottom, 0px));inset-inline-end:calc(22px + env(safe-area-inset-right, 0px));z-index:55;width:56px;height:56px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(37,211,102,.35),0 3px 8px rgba(0,0,0,.15);transition:transform .2s ease,box-shadow .2s ease,opacity .2s ease}
+.wa-float:hover,.wa-float:active{transform:scale(1.06);box-shadow:0 10px 26px rgba(37,211,102,.45),0 3px 8px rgba(0,0,0,.2)}
+.wa-float svg{width:28px;height:28px;fill:#fff}
+.wa-float:focus-visible{outline:3px solid #fff;outline-offset:3px}
+/* Hide while the cart drawer is open — its footer buttons need the room. */
+body.drawer-open .wa-float{opacity:0;pointer-events:none;transform:translateY(20px) scale(.9)}
+/* Mobile tweak: sit a hair inset so it doesn't feel jammed against the edge
+   and clears the on-screen home indicator on iOS. */
+@media(max-width:620px){
+  .wa-float{width:56px;height:56px;bottom:calc(18px + env(safe-area-inset-bottom, 0px));inset-inline-end:calc(18px + env(safe-area-inset-right, 0px))}
+  /* On the checkout page the Place order CTA lives near the bottom on
+     narrow screens — nudge the bubble up so it never overlaps the button. */
+  body.view-checkout .wa-float{bottom:calc(84px + env(safe-area-inset-bottom, 0px))}
+}
 @media(max-width:880px){
   .hero-grid,.pd-grid{grid-template-columns:1fr}
   .hero-grid{text-align:center}
@@ -1511,6 +1526,9 @@ function renderCartBadge(){document.getElementById('cartCount').textContent=cart
 function toggleCart(open){
   document.getElementById('drawer').classList.toggle('open',open);
   document.getElementById('drawerBg').classList.toggle('open',open);
+  /* Body class so CSS can hide overlapping UI (floating WA button) while
+     the drawer is up. */
+  document.body.classList.toggle('drawer-open', !!open);
   if(open)renderDrawer();
 }
 function renderDrawer(){
@@ -2682,6 +2700,9 @@ function go(view,arg,opts){
   ALL_VIEWS.forEach(v=>{
     const el=document.getElementById('view-'+v);
     if(el) el.classList.toggle('hiddenview',v!==view);
+    /* Mirror the current view onto <body> so CSS can react (used by the
+       floating WA button on mobile checkout to sit above the CTA). */
+    document.body.classList.toggle('view-'+v, v===view);
   });
   toggleCart(false);
   if(view==='home'){
